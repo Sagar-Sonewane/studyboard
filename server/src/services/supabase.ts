@@ -1,27 +1,19 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.SUPABASE_URL || '';
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-
 let supabaseAdmin: SupabaseClient | null = null;
 
-if (supabaseUrl && supabaseServiceRoleKey) {
-  supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  });
-}
-
 export function getSupabaseAdmin(): SupabaseClient {
+  const url = process.env.SUPABASE_URL || '';
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || '';
+
+  if (!url || !key) {
+    throw new Error(
+      'Supabase client requested but SUPABASE_URL and SUPABASE_ANON_KEY/SUPABASE_SERVICE_ROLE_KEY are missing'
+    );
+  }
+
   if (!supabaseAdmin) {
-    if (!supabaseUrl || !supabaseServiceRoleKey) {
-      throw new Error(
-        'Supabase Admin client requested but SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is missing'
-      );
-    }
-    supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey, {
+    supabaseAdmin = createClient(url, key, {
       auth: {
         autoRefreshToken: false,
         persistSession: false,
