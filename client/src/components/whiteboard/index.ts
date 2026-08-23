@@ -1,2 +1,2 @@
-// Placeholder for whiteboard components (tldraw / canvas / annotations)
-export {};
+export * from './WhiteboardCanvas';
+export * from './WhiteboardToolbar';

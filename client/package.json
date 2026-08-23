@@ -10,7 +10,10 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.48.1",
+    "@tldraw/tldraw": "^5.3.2",
+    "@tldraw/tlschema": "^5.3.2",
     "clsx": "^2.1.1",
+    "livekit-client": "^2.22.0",
     "lucide-react": "^0.475.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

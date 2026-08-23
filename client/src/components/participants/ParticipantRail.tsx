@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ParticipantState } from '../../hooks/use-room-presence';
+import { VoiceConnectionState } from '../../hooks/use-livekit-voice';
 import {
   Crown,
   Mic,
@@ -20,11 +21,16 @@ interface ParticipantRailProps {
   participants: ParticipantState[];
   currentParticipantId: string;
   isMuted: boolean;
+  isSpeaking: boolean;
+  voiceStatus: VoiceConnectionState;
+  speakingIdentities?: Set<string>;
+  mutedIdentities?: Set<string>;
   onToggleMute: () => void;
   onLeaveRoom: () => void;
+  onToggleSimulateSpeak?: () => void;
 }
 
-// Generate consistent avatar colors
+// Consistent curated avatar colors
 const AVATAR_COLORS = [
   'bg-indigo-500 text-white',
   'bg-emerald-500 text-white',
@@ -48,8 +54,13 @@ export const ParticipantRail: React.FC<ParticipantRailProps> = ({
   participants,
   currentParticipantId,
   isMuted,
+  isSpeaking,
+  voiceStatus,
+  speakingIdentities = new Set(),
+  mutedIdentities = new Set(),
   onToggleMute,
   onLeaveRoom,
+  onToggleSimulateSpeak,
 }) => {
   // Retrieve saved preference or default to expanded
   const [railState, setRailState] = useState<RailState>(() => {
@@ -64,26 +75,45 @@ export const ParticipantRail: React.FC<ParticipantRailProps> = ({
     localStorage.setItem(RAIL_STORAGE_KEY, railState);
   }, [railState]);
 
-  // State 3: Hidden floating pill (anchored top-left of canvas)
+  // Helper to check if a specific participant is speaking (LiveKit identity or WS presence)
+  const isParticipantSpeaking = (p: ParticipantState) => {
+    if (p.participantId === currentParticipantId) {
+      return isSpeaking || p.speaking || speakingIdentities.has(p.participantId);
+    }
+    return p.speaking || speakingIdentities.has(p.participantId) || (p.userId ? speakingIdentities.has(p.userId) : false);
+  };
+
+  // Helper to check if a participant is muted
+  const isParticipantMuted = (p: ParticipantState) => {
+    if (p.participantId === currentParticipantId) {
+      return isMuted;
+    }
+    return p.muted || mutedIdentities.has(p.participantId) || (p.userId ? mutedIdentities.has(p.userId) : false);
+  };
+
+  // State 3: Hidden floating pill (anchored top-left of canvas per DESIGN.md)
   if (railState === 'hidden') {
     return (
       <div className="absolute top-3 left-3 z-30 animate-in fade-in zoom-in-95 duration-150">
         <button
           onClick={() => setRailState('expanded')}
-          className="flex items-center gap-2 px-3 py-2 bg-white/95 backdrop-blur-sm border hairline-border rounded-full shadow-sm hover:bg-neutral-50 transition-colors group"
-          title="Show participants list"
+          className="flex items-center gap-2 px-3 py-1.5 bg-white/95 backdrop-blur-sm border hairline-border rounded-full shadow-xs hover:bg-neutral-50 transition-colors group cursor-pointer"
+          title="Show participant list"
         >
           <div className="flex -space-x-2 overflow-hidden">
-            {participants.slice(0, 3).map((p) => (
-              <div
-                key={p.participantId}
-                className={`inline-block h-5 w-5 rounded-full ring-2 ring-white flex items-center justify-center text-[9px] font-semibold ${getAvatarColor(
-                  p.displayName
-                )}`}
-              >
-                {p.displayName.slice(0, 1).toUpperCase()}
-              </div>
-            ))}
+            {participants.slice(0, 3).map((p) => {
+              const speaking = isParticipantSpeaking(p);
+              return (
+                <div
+                  key={p.participantId}
+                  className={`inline-block h-5 w-5 rounded-full ring-2 ring-white flex items-center justify-center text-[9px] font-semibold ${getAvatarColor(
+                    p.displayName
+                  )} ${speaking ? 'ring-emerald-400 ring-offset-0 animate-pulse' : ''}`}
+                >
+                  {p.displayName.slice(0, 1).toUpperCase()}
+                </div>
+              );
+            })}
           </div>
 
           <span className="text-xs font-medium text-neutral-700">
@@ -105,7 +135,7 @@ export const ParticipantRail: React.FC<ParticipantRailProps> = ({
           <div className="p-2 border-b hairline-border flex justify-center">
             <button
               onClick={() => setRailState('expanded')}
-              className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-800 hover:bg-neutral-100 transition-colors"
+              className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-800 hover:bg-neutral-100 transition-colors cursor-pointer"
               title="Expand participant list"
             >
               <ChevronRight className="w-4 h-4" />
@@ -116,12 +146,15 @@ export const ParticipantRail: React.FC<ParticipantRailProps> = ({
           <div className="p-2 space-y-2.5 overflow-y-auto max-h-[calc(100vh-180px)]">
             {participants.map((p) => {
               const isSelf = p.participantId === currentParticipantId;
+              const speaking = isParticipantSpeaking(p);
+              const muted = isParticipantMuted(p);
+
               return (
                 <div key={p.participantId} className="relative group flex justify-center">
                   <div
                     className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold relative ${getAvatarColor(
                       p.displayName
-                    )} ${p.speaking ? 'ring-2 ring-emerald-500 ring-offset-1 animate-pulse' : ''}`}
+                    )} ${speaking ? 'ring-2 ring-emerald-500 ring-offset-1 animate-pulse' : ''}`}
                   >
                     {p.displayName.slice(0, 2).toUpperCase()}
 
@@ -133,8 +166,18 @@ export const ParticipantRail: React.FC<ParticipantRailProps> = ({
                   </div>
 
                   {/* Tooltip on hover */}
-                  <div className="absolute left-12 top-1/2 -translate-y-1/2 bg-neutral-900 text-white text-xs px-2 py-1 rounded-md shadow-md opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50">
-                    {p.displayName} {isSelf && '(You)'} {p.isHost && '· Host'}
+                  <div className="absolute left-12 top-1/2 -translate-y-1/2 bg-neutral-900 text-white text-xs px-2.5 py-1.5 rounded-lg shadow-md opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50 flex items-center gap-1.5">
+                    <span>{p.displayName}</span>
+                    {isSelf && <span className="text-neutral-400">(you)</span>}
+                    {p.isHost && <span className="text-amber-300">· host</span>}
+                    <span className="text-neutral-400">·</span>
+                    {muted ? (
+                      <span className="text-rose-300 text-[10px]">muted</span>
+                    ) : speaking ? (
+                      <span className="text-emerald-300 text-[10px]">speaking</span>
+                    ) : (
+                      <span className="text-neutral-300 text-[10px]">mic on</span>
+                    )}
                   </div>
                 </div>
               );
@@ -146,20 +189,20 @@ export const ParticipantRail: React.FC<ParticipantRailProps> = ({
         <div className="p-2 border-t hairline-border flex flex-col gap-2 items-center">
           <button
             onClick={onToggleMute}
-            className={`p-2 rounded-lg transition-colors ${
+            className={`p-2 rounded-lg transition-colors cursor-pointer ${
               isMuted
                 ? 'bg-rose-50 text-rose-600 hover:bg-rose-100'
                 : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
             }`}
-            title={isMuted ? 'Unmute microphone' : 'Mute microphone'}
+            title={isMuted ? 'unmute microphone' : 'mute microphone'}
           >
             {isMuted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
           </button>
 
           <button
             onClick={onLeaveRoom}
-            className="p-2 rounded-lg text-neutral-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
-            title="Leave room"
+            className="p-2 rounded-lg text-neutral-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+            title="leave room"
           >
             <LogOut className="w-4 h-4" />
           </button>
@@ -184,70 +227,78 @@ export const ParticipantRail: React.FC<ParticipantRailProps> = ({
           <div className="flex items-center gap-1">
             <button
               onClick={() => setRailState('collapsed')}
-              className="p-1 rounded-md text-neutral-400 hover:text-neutral-800 hover:bg-neutral-100 transition-colors"
-              title="Collapse to avatar strip"
+              className="p-1 rounded-md text-neutral-400 hover:text-neutral-800 hover:bg-neutral-100 transition-colors cursor-pointer"
+              title="collapse to avatar strip"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
             <button
               onClick={() => setRailState('hidden')}
-              className="p-1 rounded-md text-neutral-400 hover:text-neutral-800 hover:bg-neutral-100 transition-colors text-[10px] font-mono px-1"
-              title="Hide to floating pill"
+              className="p-1 rounded-md text-neutral-400 hover:text-neutral-800 hover:bg-neutral-100 transition-colors text-[10px] font-mono px-1 cursor-pointer"
+              title="hide to floating pill"
             >
               hide
             </button>
           </div>
         </div>
 
-        {/* Participant Rows */}
-        <div className="p-2.5 space-y-1.5 overflow-y-auto max-h-[calc(100vh-210px)]">
+        {/* Participant Rows — compact rows per DESIGN.md */}
+        <div className="p-2.5 space-y-1.5 overflow-y-auto max-h-[calc(100vh-230px)]">
           {participants.map((p) => {
             const isSelf = p.participantId === currentParticipantId;
+            const speaking = isParticipantSpeaking(p);
+            const muted = isParticipantMuted(p);
 
             return (
               <div
                 key={p.participantId}
                 className={`p-2 rounded-xl border hairline-border flex items-center justify-between transition-colors ${
                   isSelf ? 'bg-white shadow-xs' : 'bg-white/80 hover:bg-white'
-                }`}
+                } ${speaking ? 'border-emerald-300' : ''}`}
               >
                 {/* Left: Avatar & Info */}
                 <div className="flex items-center gap-2.5 min-w-0">
                   <div
                     className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 relative ${getAvatarColor(
                       p.displayName
-                    )} ${p.speaking ? 'ring-2 ring-emerald-500 ring-offset-1 animate-pulse' : ''}`}
+                    )} ${speaking ? 'ring-2 ring-emerald-500 ring-offset-1 animate-pulse' : ''}`}
                   >
                     {p.displayName.slice(0, 2).toUpperCase()}
                   </div>
 
                   <div className="truncate">
                     <div className="text-xs font-medium text-neutral-900 truncate flex items-center gap-1">
-                      <span>{p.displayName}</span>
-                      {isSelf && <span className="text-[10px] text-neutral-400 font-normal">(you)</span>}
+                      <span className="truncate">{p.displayName}</span>
+                      {isSelf && <span className="text-[10px] text-neutral-400 font-normal shrink-0">(you)</span>}
                     </div>
                     <div className="text-[10px] text-neutral-400 flex items-center gap-1">
                       {p.isHost ? (
                         <span className="text-amber-700 font-medium inline-flex items-center gap-0.5">
-                          <Crown className="w-2.5 h-2.5 text-amber-500" /> Host
+                          <Crown className="w-2.5 h-2.5 text-amber-500" /> host
                         </span>
                       ) : p.guestName ? (
-                        <span>Guest</span>
+                        <span>guest</span>
                       ) : (
-                        <span>Member</span>
+                        <span>member</span>
                       )}
                     </div>
                   </div>
                 </div>
 
-                {/* Right: Mic status icon */}
-                <div className="flex items-center gap-1 shrink-0">
-                  {p.muted ? (
-                    <MicOff className="w-3.5 h-3.5 text-neutral-400" />
-                  ) : p.speaking ? (
-                    <Volume2 className="w-3.5 h-3.5 text-emerald-600 animate-pulse" />
+                {/* Right: Mic status icon inline in each row per DESIGN.md */}
+                <div className="flex items-center gap-1 shrink-0 ml-1">
+                  {muted ? (
+                    <div className="p-1 rounded-md text-neutral-400" title="microphone muted">
+                      <MicOff className="w-3.5 h-3.5 text-neutral-400" />
+                    </div>
+                  ) : speaking ? (
+                    <div className="p-1 rounded-md text-emerald-600 animate-pulse bg-emerald-50" title="speaking now">
+                      <Volume2 className="w-3.5 h-3.5 text-emerald-600" />
+                    </div>
                   ) : (
-                    <Mic className="w-3.5 h-3.5 text-neutral-400" />
+                    <div className="p-1 rounded-md text-neutral-400" title="microphone active">
+                      <Mic className="w-3.5 h-3.5 text-neutral-400" />
+                    </div>
                   )}
                 </div>
               </div>
@@ -257,35 +308,76 @@ export const ParticipantRail: React.FC<ParticipantRailProps> = ({
       </div>
 
       {/* Call Controls anchored at bottom of rail per DESIGN.md */}
-      <div className="p-3 border-t hairline-border bg-white flex items-center justify-between gap-2">
-        <button
-          onClick={onToggleMute}
-          className={`flex-1 py-2 px-3 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1.5 ${
-            isMuted
-              ? 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200'
-              : 'bg-neutral-100 text-neutral-800 hover:bg-neutral-200'
-          }`}
-        >
-          {isMuted ? (
-            <>
-              <MicOff className="w-3.5 h-3.5 text-rose-600" />
-              <span>unmute</span>
-            </>
-          ) : (
-            <>
-              <Mic className="w-3.5 h-3.5 text-neutral-600" />
-              <span>mute mic</span>
-            </>
-          )}
-        </button>
+      <div className="p-3 border-t hairline-border bg-white flex flex-col gap-2">
+        {/* Voice status indicator badge */}
+        <div className="flex items-center justify-between text-[11px] px-1 text-neutral-500">
+          <span className="flex items-center gap-1.5">
+            <span
+              className={`w-1.5 h-1.5 rounded-full ${
+                voiceStatus === 'connected'
+                  ? 'bg-emerald-500 animate-pulse'
+                  : voiceStatus === 'connecting' || voiceStatus === 'reconnecting'
+                  ? 'bg-amber-500 animate-pulse'
+                  : voiceStatus === 'fallback'
+                  ? 'bg-indigo-500'
+                  : 'bg-neutral-300'
+              }`}
+            />
+            {voiceStatus === 'connected'
+              ? 'voice live'
+              : voiceStatus === 'connecting'
+              ? 'connecting voice...'
+              : voiceStatus === 'reconnecting'
+              ? 'reconnecting voice...'
+              : voiceStatus === 'fallback'
+              ? 'simulated voice'
+              : 'voice offline'}
+          </span>
 
-        <button
-          onClick={onLeaveRoom}
-          className="p-2 rounded-lg text-neutral-500 hover:text-rose-600 hover:bg-rose-50 border hairline-border transition-colors"
-          title="Leave room"
-        >
-          <LogOut className="w-4 h-4" />
-        </button>
+          {onToggleSimulateSpeak && (
+            <button
+              onClick={onToggleSimulateSpeak}
+              className={`text-[10px] px-1.5 py-0.5 rounded border hairline-border cursor-pointer ${
+                isSpeaking ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'text-neutral-500 hover:bg-neutral-50'
+              }`}
+              title="test speaking indicator"
+            >
+              {isSpeaking ? 'speaking...' : 'test speak'}
+            </button>
+          )}
+        </div>
+
+        {/* Action Row */}
+        <div className="flex items-center justify-between gap-2">
+          <button
+            onClick={onToggleMute}
+            className={`flex-1 py-2 px-3 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
+              isMuted
+                ? 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200'
+                : 'bg-neutral-100 text-neutral-800 hover:bg-neutral-200'
+            }`}
+          >
+            {isMuted ? (
+              <>
+                <MicOff className="w-3.5 h-3.5 text-rose-600" />
+                <span>unmute mic</span>
+              </>
+            ) : (
+              <>
+                <Mic className="w-3.5 h-3.5 text-neutral-600" />
+                <span>mute mic</span>
+              </>
+            )}
+          </button>
+
+          <button
+            onClick={onLeaveRoom}
+            className="p-2 rounded-lg text-neutral-500 hover:text-rose-600 hover:bg-rose-50 border hairline-border transition-colors cursor-pointer"
+            title="leave room"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
+        </div>
       </div>
     </aside>
   );

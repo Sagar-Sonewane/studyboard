@@ -95,6 +95,7 @@ increase lock-in) while still getting fast, ready-made auth and storage.
 │   │   └── index.ts
 │   └── package.json
 ├── docs/                    # ← this folder — product/design/structure context
+│   ├── PROJECT_STATUS.md    # ← read this first, always — living session log
 │   ├── PRODUCT.md
 │   ├── DESIGN.md
 │   ├── STRUCTURE.md

@@ -45,7 +45,18 @@ export interface JoinRoomResponse {
   guest?: {
     name: string;
   };
+  livekitToken?: string;
+  livekitUrl?: string;
+  isLiveKitConfigured?: boolean;
   joinedAt: string;
+}
+
+export interface LiveKitTokenResponse {
+  roomId: string;
+  participantId: string;
+  token: string;
+  serverUrl: string;
+  isConfigured: boolean;
 }
 
 export async function fetchHealth(): Promise<HealthCheckResponse> {
@@ -131,3 +142,40 @@ export async function joinRoom(
 
   return response.json();
 }
+
+/**
+ * POST /api/rooms/:id/token — Request or refresh LiveKit access token
+ */
+export async function fetchLiveKitToken(
+  roomId: string,
+  options: {
+    participantId?: string;
+    displayName?: string;
+    token?: string | null;
+  } = {}
+): Promise<LiveKitTokenResponse> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+
+  if (options.token) {
+    headers.Authorization = `Bearer ${options.token}`;
+  }
+
+  const response = await fetch(`${API_BASE_URL}/api/rooms/${encodeURIComponent(roomId)}/token`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      participantId: options.participantId,
+      displayName: options.displayName,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || `Failed to fetch LiveKit token (${response.status})`);
+  }
+
+  return response.json();
+}
+

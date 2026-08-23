@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import crypto from 'crypto';
 import { prisma } from '../services/prisma';
 import { requireAuth, optionalAuth } from '../middleware/auth';
+import { generateLiveKitToken } from '../services/livekit';
 
 export const roomsRouter = Router();
 
@@ -242,6 +243,7 @@ roomsRouter.post('/:id/join', optionalAuth, async (req: Request, res: Response) 
       }
 
       const isHost = user ? room.hostId === user.id : false;
+      const displayName = user ? user.displayName : cleanGuestName!;
 
       // Create participant record
       const participant = await prisma.roomParticipant.create({
@@ -250,6 +252,15 @@ roomsRouter.post('/:id/join', optionalAuth, async (req: Request, res: Response) 
           userId: user ? user.id : null,
           guestName: user ? null : cleanGuestName,
         },
+      });
+
+      // Generate LiveKit token for this participant
+      const livekit = await generateLiveKitToken({
+        roomId: room.id,
+        participantId: participant.id,
+        displayName,
+        userId: user?.id,
+        isHost,
       });
 
       return res.json({
@@ -269,6 +280,9 @@ roomsRouter.post('/:id/join', optionalAuth, async (req: Request, res: Response) 
               name: cleanGuestName,
             }
           : undefined,
+        livekitToken: livekit.token,
+        livekitUrl: livekit.serverUrl,
+        isLiveKitConfigured: livekit.isConfigured,
         joinedAt: participant.joinedAt.toISOString(),
       });
     } catch (err: any) {
@@ -301,6 +315,14 @@ roomsRouter.post('/:id/join', optionalAuth, async (req: Request, res: Response) 
     joinedAt: new Date().toISOString(),
   });
 
+  const livekit = await generateLiveKitToken({
+    roomId: memRoom.id,
+    participantId,
+    displayName,
+    userId: user?.id,
+    isHost,
+  });
+
   return res.json({
     participantId,
     roomId: memRoom.id,
@@ -318,6 +340,67 @@ roomsRouter.post('/:id/join', optionalAuth, async (req: Request, res: Response) 
           name: cleanGuestName,
         }
       : undefined,
+    livekitToken: livekit.token,
+    livekitUrl: livekit.serverUrl,
+    isLiveKitConfigured: livekit.isConfigured,
     joinedAt: new Date().toISOString(),
   });
 });
+
+/**
+ * POST /api/rooms/:id/token & POST /api/rooms/:id/livekit-token
+ * Fetch or refresh a scoped LiveKit access token for an active participant.
+ */
+const handleGetLiveKitToken = async (req: Request, res: Response) => {
+  const { id: roomId } = req.params;
+  const { participantId, displayName: customDisplayName } = req.body;
+  const user = req.user;
+
+  const targetParticipantId = participantId || user?.id || crypto.randomUUID();
+  const displayName = user?.displayName || customDisplayName || 'Participant';
+
+  let isHost = false;
+  if (process.env.DATABASE_URL) {
+    try {
+      const room = await prisma.room.findUnique({ where: { id: roomId } });
+      if (room) {
+        isHost = user ? room.hostId === user.id : false;
+      }
+    } catch {
+      // ignore
+    }
+  } else {
+    const memRoom = inMemoryRooms.get(roomId);
+    if (memRoom && user) {
+      isHost = memRoom.hostId === user.id;
+    }
+  }
+
+  try {
+    const livekit = await generateLiveKitToken({
+      roomId,
+      participantId: targetParticipantId,
+      displayName,
+      userId: user?.id,
+      isHost,
+    });
+
+    return res.json({
+      roomId,
+      participantId: targetParticipantId,
+      token: livekit.token,
+      serverUrl: livekit.serverUrl,
+      isConfigured: livekit.isConfigured,
+    });
+  } catch (err: any) {
+    console.error('[Rooms API] Failed to generate LiveKit token:', err);
+    return res.status(500).json({
+      error: 'TokenGenerationFailed',
+      message: err.message || 'Failed to generate LiveKit token',
+    });
+  }
+};
+
+roomsRouter.post('/:id/token', optionalAuth, handleGetLiveKitToken);
+roomsRouter.post('/:id/livekit-token', optionalAuth, handleGetLiveKitToken);
+
