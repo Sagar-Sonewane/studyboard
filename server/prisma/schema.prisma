@@ -1,0 +1,117 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum RoomStatus {
+  active
+  paused
+  ended
+}
+
+enum EntitlementType {
+  day_pass
+  monthly
+}
+
+enum EntitlementStatus {
+  active
+  expired
+  cancelled
+}
+
+enum FileType {
+  image
+  pdf_page
+  doc_converted
+}
+
+model Profile {
+  id           String             @id @db.Uuid
+  displayName  String             @map("display_name")
+  createdAt    DateTime           @default(now()) @map("created_at")
+  rooms        Room[]             @relation("HostRooms")
+  participants RoomParticipant[]
+  entitlements Entitlement[]
+  ownedBoards  Board[]            @relation("OwnerBoards")
+  uploads      UploadedFile[]
+
+  @@map("profiles")
+}
+
+model Room {
+  id           String            @id @default(uuid()) @db.Uuid
+  name         String
+  hostId       String            @map("host_id") @db.Uuid
+  host         Profile           @relation("HostRooms", fields: [hostId], references: [id])
+  inviteCode   String            @unique @map("invite_code")
+  status       RoomStatus        @default(active)
+  createdAt    DateTime          @default(now()) @map("created_at")
+  participants RoomParticipant[]
+  boards       Board[]
+
+  @@map("rooms")
+}
+
+model RoomParticipant {
+  id        String    @id @default(uuid()) @db.Uuid
+  roomId    String    @map("room_id") @db.Uuid
+  room      Room      @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  userId    String?   @map("user_id") @db.Uuid
+  user      Profile?  @relation(fields: [userId], references: [id], onDelete: SetNull)
+  guestName String?   @map("guest_name")
+  joinedAt  DateTime  @default(now()) @map("joined_at")
+  leftAt    DateTime? @map("left_at")
+
+  @@map("room_participants")
+}
+
+model Entitlement {
+  id                       String            @id @default(uuid()) @db.Uuid
+  userId                   String            @map("user_id") @db.Uuid
+  user                     Profile           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type                     EntitlementType
+  status                   EntitlementStatus @default(active)
+  startsAt                 DateTime          @map("starts_at")
+  expiresAt                DateTime          @map("expires_at")
+  stripeSubscriptionId     String?           @map("stripe_subscription_id")
+  stripeCheckoutSessionId  String?           @map("stripe_checkout_session_id")
+  createdAt                DateTime          @default(now()) @map("created_at")
+
+  @@map("entitlements")
+}
+
+model Board {
+  id                 String         @id @default(uuid()) @db.Uuid
+  roomId             String         @map("room_id") @db.Uuid
+  room               Room           @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  isShared           Boolean        @default(false) @map("is_shared")
+  forkedFromBoardId  String?        @map("forked_from_board_id") @db.Uuid
+  forkedFromBoard    Board?         @relation("ForkedBoards", fields: [forkedFromBoardId], references: [id], onDelete: SetNull)
+  forks              Board[]        @relation("ForkedBoards")
+  ownerId            String?        @map("owner_id") @db.Uuid
+  owner              Profile?       @relation("OwnerBoards", fields: [ownerId], references: [id], onDelete: SetNull)
+  createdAt          DateTime       @default(now()) @map("created_at")
+  uploadedFiles      UploadedFile[]
+
+  @@map("boards")
+}
+
+model UploadedFile {
+  id               String   @id @default(uuid()) @db.Uuid
+  boardId          String   @map("board_id") @db.Uuid
+  board            Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  uploadedBy       String   @map("uploaded_by") @db.Uuid
+  uploader         Profile  @relation(fields: [uploadedBy], references: [id], onDelete: Cascade)
+  storagePath      String   @map("storage_path")
+  fileType         FileType @map("file_type")
+  originalFilename String   @map("original_filename")
+  sizeBytes        Int      @map("size_bytes")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  @@map("uploaded_files")
+}
