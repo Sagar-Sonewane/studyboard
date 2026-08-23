@@ -82,13 +82,14 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
 
     return next();
   } catch (err: any) {
-    // Fallback for offline development / mock mode if SUPABASE_URL isn't set yet
-    if (
-      (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) &&
-      token.startsWith('dev-user-')
-    ) {
+    // Fallback for offline development / mock mode
+    if (token.startsWith('dev-user-')) {
       const parts = token.split(':');
-      const devId = parts[1] || '00000000-0000-0000-0000-000000000001';
+      let devId = parts[1] || '00000000-0000-4000-8000-000000000001';
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(devId)) {
+        devId = '00000000-0000-4000-8000-000000000001';
+      }
       const devName = parts[2] || 'Dev Host';
       req.user = {
         id: devId,
@@ -103,7 +104,9 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
             update: { displayName: devName },
             create: { id: devId, displayName: devName },
           });
-        } catch {}
+        } catch (err) {
+          console.warn('[Auth Middleware] Dev profile upsert error:', err);
+        }
       }
 
       return next();

@@ -128,7 +128,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
     const devUserObj = {
-      id: `dev-${name.toLowerCase().replace(/\s+/g, '-')}-001`,
+      id: crypto.randomUUID ? crypto.randomUUID() : '00000000-0000-4000-8000-000000000001',
       name: name.trim(),
       email: `${name.toLowerCase().replace(/\s+/g, '')}@studysync.local`,
     };
