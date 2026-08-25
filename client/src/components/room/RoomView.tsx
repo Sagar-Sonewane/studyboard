@@ -175,7 +175,14 @@ export const RoomView: React.FC<RoomViewProps> = ({ room, session, onLeave }) =>
 
         {/* Dominant Whiteboard Area (~80% width per DESIGN.md) */}
         <main className="flex-1 relative flex overflow-hidden pb-14 md:pb-0">
-          <WhiteboardCanvas />
+          <WhiteboardCanvas
+            roomId={room.id}
+            user={{
+              id: session.user?.id,
+              displayName: participantName,
+              color: session.isHost ? '#d97706' : '#4f46e5',
+            }}
+          />
         </main>
       </div>
 

@@ -10,7 +10,8 @@ import express from 'express';
 import cors from 'cors';
 import { healthRouter } from './routes/health';
 import { roomsRouter } from './routes/rooms';
-import { setupWebSocketServer } from './ws/server';
+import { setupPresenceWebSocketServer } from './ws/server';
+import { createYjsWebSocketServer } from './ws/yjs';
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -36,17 +37,38 @@ app.get('/', (_req, res) => {
     app: 'StudySync Backend',
     health: '/api/health',
     ws: '/ws',
+    yjs: '/yjs',
   });
 });
 
-// Create HTTP and WebSocket server
+// Create HTTP and WebSocket servers
 const server = http.createServer(app);
-const wss = setupWebSocketServer(server);
+const presenceWss = setupPresenceWebSocketServer();
+const yjsWss = createYjsWebSocketServer();
+
+// Dispatch WebSocket upgrade requests based on path
+server.on('upgrade', (request, socket, head) => {
+  const url = new URL(request.url || '', `http://${request.headers.host || 'localhost'}`);
+  const pathname = url.pathname;
+
+  if (pathname === '/ws') {
+    presenceWss.handleUpgrade(request, socket, head, (ws) => {
+      presenceWss.emit('connection', ws, request);
+    });
+  } else if (pathname === '/yjs' || pathname.startsWith('/yjs/')) {
+    yjsWss.handleUpgrade(request, socket, head, (ws) => {
+      yjsWss.emit('connection', ws, request);
+    });
+  } else {
+    socket.destroy();
+  }
+});
 
 server.listen(PORT, () => {
   console.log(`[StudySync Server] Running on http://localhost:${PORT}`);
-  console.log(`[StudySync Server] WebSocket endpoint ready at ws://localhost:${PORT}/ws`);
+  console.log(`[StudySync Server] Presence WebSocket ready at ws://localhost:${PORT}/ws`);
+  console.log(`[StudySync Server] Yjs Whiteboard WebSocket ready at ws://localhost:${PORT}/yjs`);
   console.log(`[StudySync Server] Health check available at http://localhost:${PORT}/api/health`);
 });
 
-export { app, server, wss };
+export { app, server, presenceWss, yjsWss };

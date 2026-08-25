@@ -2,52 +2,80 @@ import React, { useState, useCallback } from 'react';
 import { Tldraw, Editor } from '@tldraw/tldraw';
 import { GeoShapeGeoStyle } from '@tldraw/tlschema';
 import { WhiteboardToolbar } from './WhiteboardToolbar';
+import { useYjsWhiteboardSync } from '../../lib/yjs-sync';
+import { forkBoard } from '../../lib/api';
 import {
   UploadCloud,
   GitFork,
   ZoomIn,
   ZoomOut,
   Maximize,
+  Radio,
+  Lock,
+  ArrowLeft,
+  CheckCircle2,
 } from 'lucide-react';
 
 interface WhiteboardCanvasProps {
+  roomId: string;
+  user?: {
+    id?: string;
+    displayName: string;
+    color?: string;
+  };
+  token?: string | null;
   onUploadFile?: () => void;
-  onForkBoard?: () => void;
 }
 
 export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
+  roomId,
+  user,
+  token,
   onUploadFile,
-  onForkBoard,
 }) => {
-  const [editor, setEditor] = useState<Editor | null>(null);
+  const [isForked, setIsForked] = useState(false);
+  const [forkedBoardId, setForkedBoardId] = useState<string | null>(null);
   const [activeTool, setActiveTool] = useState<string>('select');
   const [zoomLevel, setZoomLevel] = useState<number>(100);
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
+  const [isForking, setIsForking] = useState(false);
 
-  const handleMount = useCallback((editorInstance: Editor) => {
-    setEditor(editorInstance);
-    // Set initial tool
-    editorInstance.setCurrentTool('draw');
-    setActiveTool('draw');
+  // Yjs synchronization hook
+  const { editor, onEditorMount, syncState } = useYjsWhiteboardSync({
+    roomId,
+    isForked,
+    forkedBoardId,
+    user,
+  });
 
-    // Subscribe to tool changes & history changes
-    const cleanup = editorInstance.store.listen(() => {
-      try {
-        const currentToolId = editorInstance.getCurrentToolId();
-        setActiveTool(currentToolId);
-        setCanUndo(editorInstance.getCanUndo());
-        setCanRedo(editorInstance.getCanRedo());
-        setZoomLevel(Math.round(editorInstance.getZoomLevel() * 100));
-      } catch {
-        // ignore
-      }
-    });
+  const handleMount = useCallback(
+    (editorInstance: Editor) => {
+      onEditorMount(editorInstance);
 
-    return () => {
-      cleanup();
-    };
-  }, []);
+      // Set initial tool
+      editorInstance.setCurrentTool('draw');
+      setActiveTool('draw');
+
+      // Subscribe to tool changes & history changes
+      const cleanup = editorInstance.store.listen(() => {
+        try {
+          const currentToolId = editorInstance.getCurrentToolId();
+          setActiveTool(currentToolId);
+          setCanUndo(editorInstance.getCanUndo());
+          setCanRedo(editorInstance.getCanRedo());
+          setZoomLevel(Math.round(editorInstance.getZoomLevel() * 100));
+        } catch {
+          // ignore
+        }
+      });
+
+      return () => {
+        cleanup();
+      };
+    },
+    [onEditorMount]
+  );
 
   const handleToolSelect = useCallback(
     (tool: string, geoType?: string) => {
@@ -70,6 +98,29 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
     },
     [editor]
   );
+
+  // Fork shared board into a private copy
+  const handleForkBoard = async () => {
+    if (isForking) return;
+    setIsForking(true);
+    try {
+      const res = await forkBoard(roomId, token);
+      setForkedBoardId(res.board.id);
+      setIsForked(true);
+    } catch (err) {
+      console.error('[Whiteboard] Failed to fork board via API, creating local session:', err);
+      setForkedBoardId(`local-${Date.now()}`);
+      setIsForked(true);
+    } finally {
+      setIsForking(false);
+    }
+  };
+
+  // Switch back to shared room board
+  const handleSwitchToShared = () => {
+    setIsForked(false);
+    setForkedBoardId(null);
+  };
 
   // Zoom helpers
   const handleZoomIn = () => {
@@ -102,8 +153,41 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
 
   return (
     <div className="relative w-full h-full flex-1 overflow-hidden bg-[#fdfdfd]">
+      {/* Top Banner when in Forked / Personal Copy Mode */}
+      {isForked ? (
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 flex items-center gap-3 px-4 py-2 bg-indigo-900/90 backdrop-blur-md text-white border hairline-border border-indigo-700/50 rounded-2xl shadow-sm text-xs animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="flex items-center gap-1.5 font-medium">
+            <Lock className="w-3.5 h-3.5 text-indigo-300" />
+            <span>personal copy · private board</span>
+          </div>
+          <div className="w-px h-3 bg-indigo-700" />
+          <button
+            onClick={handleSwitchToShared}
+            className="flex items-center gap-1 text-indigo-200 hover:text-white transition-colors font-medium cursor-pointer"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>switch to shared board</span>
+          </button>
+        </div>
+      ) : (
+        /* Top Status Indicator for Shared Board Sync */
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 hidden sm:flex items-center gap-1.5 px-3 py-1 bg-white/90 backdrop-blur-sm border hairline-border rounded-full shadow-xs text-[11px] font-medium text-neutral-600">
+          {syncState.isConnected ? (
+            <>
+              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span>multiplayer live</span>
+            </>
+          ) : (
+            <>
+              <Radio className="w-3 h-3 text-neutral-400 animate-spin" />
+              <span>connecting sync...</span>
+            </>
+          )}
+        </div>
+      )}
+
       {/* Tldraw Canvas Engine with hidden default UI */}
-      <div className="absolute inset-0 z-0">
+      <div className="absolute inset-0 z-0" key={isForked ? `forked-${forkedBoardId}` : `shared-${roomId}`}>
         <Tldraw
           hideUi
           onMount={handleMount}
@@ -132,16 +216,28 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
         </button>
       </div>
 
-      {/* Canvas-Anchored Action: Fork My Board (bottom-right corner per DESIGN.md) */}
+      {/* Canvas-Anchored Action: Fork My Board / Back to Shared (bottom-right corner per DESIGN.md) */}
       <div className="absolute bottom-4 right-16 z-20 hidden sm:block">
-        <button
-          onClick={onForkBoard}
-          className="flex items-center gap-1.5 px-3 py-2 bg-white/95 backdrop-blur-sm border hairline-border rounded-xl text-xs font-medium text-neutral-700 hover:bg-neutral-50 shadow-xs transition-colors cursor-pointer"
-          title="fork your own private copy of this whiteboard"
-        >
-          <GitFork className="w-3.5 h-3.5 text-indigo-600" />
-          <span>fork my board</span>
-        </button>
+        {isForked ? (
+          <button
+            onClick={handleSwitchToShared}
+            className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 text-white border border-indigo-700 rounded-xl text-xs font-medium hover:bg-indigo-700 shadow-xs transition-colors cursor-pointer"
+            title="return to live shared room board"
+          >
+            <CheckCircle2 className="w-3.5 h-3.5" />
+            <span>view shared board</span>
+          </button>
+        ) : (
+          <button
+            onClick={handleForkBoard}
+            disabled={isForking}
+            className="flex items-center gap-1.5 px-3 py-2 bg-white/95 backdrop-blur-sm border hairline-border rounded-xl text-xs font-medium text-neutral-700 hover:bg-neutral-50 shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+            title="fork your own private copy of this whiteboard"
+          >
+            <GitFork className="w-3.5 h-3.5 text-indigo-600" />
+            <span>{isForking ? 'forking...' : 'fork my board'}</span>
+          </button>
+        )}
       </div>
 
       {/* Canvas-Anchored Subtle Zoom Controls (bottom-left next to upload button) */}

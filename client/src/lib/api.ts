@@ -179,3 +179,70 @@ export async function fetchLiveKitToken(
   return response.json();
 }
 
+export interface BoardInfo {
+  id: string;
+  roomId: string;
+  isShared: boolean;
+  forkedFromBoardId?: string | null;
+  ownerId?: string | null;
+  createdAt: string;
+}
+
+/**
+ * GET /api/rooms/:id/boards — Fetch room boards (shared + forked)
+ */
+export async function fetchBoards(
+  roomId: string,
+  token?: string | null
+): Promise<{ roomId: string; boards: BoardInfo[] }> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${API_BASE_URL}/api/rooms/${encodeURIComponent(roomId)}/boards`, {
+    headers,
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || `Failed to fetch boards (${response.status})`);
+  }
+
+  return response.json();
+}
+
+/**
+ * POST /api/rooms/:id/boards/fork — Fork shared board into personal copy
+ */
+export async function forkBoard(
+  roomId: string,
+  token?: string | null,
+  fromBoardId?: string
+): Promise<{ board: BoardInfo; message: string }> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${API_BASE_URL}/api/rooms/${encodeURIComponent(roomId)}/boards/fork`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ fromBoardId }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || `Failed to fork board (${response.status})`);
+  }
+
+  return response.json();
+}
+
+

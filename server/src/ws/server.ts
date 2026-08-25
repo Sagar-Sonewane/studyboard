@@ -78,12 +78,12 @@ function handleSocketLeave(ws: WebSocket) {
   }
 }
 
-export function setupWebSocketServer(httpServer: HttpServer): WebSocketServer {
-  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+export function setupPresenceWebSocketServer(): WebSocketServer {
+  const wss = new WebSocketServer({ noServer: true });
 
   wss.on('connection', (ws: WebSocket, req) => {
     const ip = req.socket.remoteAddress;
-    console.log(`[WS] Client connected from ${ip}`);
+    console.log(`[WS Presence] Client connected from ${ip}`);
 
     // Send initial welcome & connection diagnostic
     const welcomeMsg: WSMessage = {
@@ -264,3 +264,5 @@ export function setupWebSocketServer(httpServer: HttpServer): WebSocketServer {
 
   return wss;
 }
+
+export const setupWebSocketServer = setupPresenceWebSocketServer;

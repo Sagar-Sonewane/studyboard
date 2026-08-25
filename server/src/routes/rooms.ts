@@ -404,3 +404,107 @@ const handleGetLiveKitToken = async (req: Request, res: Response) => {
 roomsRouter.post('/:id/token', optionalAuth, handleGetLiveKitToken);
 roomsRouter.post('/:id/livekit-token', optionalAuth, handleGetLiveKitToken);
 
+/**
+ * GET /api/rooms/:id/boards — Fetch room boards (shared + user's forked boards)
+ */
+roomsRouter.get('/:id/boards', optionalAuth, async (req: Request, res: Response) => {
+  const { id: roomId } = req.params;
+  const user = req.user;
+
+  if (process.env.DATABASE_URL) {
+    try {
+      const boards = await prisma.board.findMany({
+        where: {
+          roomId,
+          OR: [
+            { isShared: true },
+            ...(user ? [{ ownerId: user.id }] : []),
+          ],
+        },
+        orderBy: { createdAt: 'asc' },
+      });
+
+      return res.json({
+        roomId,
+        boards,
+      });
+    } catch (err: any) {
+      console.error('[Rooms API] Failed to fetch boards:', err);
+      return res.status(500).json({
+        error: 'DatabaseError',
+        message: 'Failed to fetch boards',
+      });
+    }
+  }
+
+  // In-memory fallback
+  return res.json({
+    roomId,
+    boards: [
+      {
+        id: `board-shared-${roomId}`,
+        roomId,
+        isShared: true,
+        forkedFromBoardId: null,
+        ownerId: null,
+        createdAt: new Date().toISOString(),
+      },
+    ],
+  });
+});
+
+/**
+ * POST /api/rooms/:id/boards/fork — Fork shared board into a personal copy
+ */
+roomsRouter.post('/:id/boards/fork', optionalAuth, async (req: Request, res: Response) => {
+  const { id: roomId } = req.params;
+  const user = req.user;
+  const { fromBoardId } = req.body;
+
+  if (process.env.DATABASE_URL) {
+    try {
+      // Find source board (defaults to shared board if not specified)
+      const sourceBoard = await prisma.board.findFirst({
+        where: {
+          roomId,
+          ...(fromBoardId ? { id: fromBoardId } : { isShared: true }),
+        },
+      });
+
+      const forkedBoard = await prisma.board.create({
+        data: {
+          roomId,
+          isShared: false,
+          forkedFromBoardId: sourceBoard?.id || null,
+          ownerId: user ? user.id : null,
+        },
+      });
+
+      return res.status(201).json({
+        board: forkedBoard,
+        message: 'Board forked successfully',
+      });
+    } catch (err: any) {
+      console.error('[Rooms API] Failed to fork board:', err);
+      return res.status(500).json({
+        error: 'DatabaseError',
+        message: 'Failed to fork board',
+      });
+    }
+  }
+
+  // In-memory fallback
+  const forkedId = `board-forked-${crypto.randomUUID()}`;
+  return res.status(201).json({
+    board: {
+      id: forkedId,
+      roomId,
+      isShared: false,
+      forkedFromBoardId: fromBoardId || `board-shared-${roomId}`,
+      ownerId: user ? user.id : null,
+      createdAt: new Date().toISOString(),
+    },
+    message: 'Board forked successfully (in-memory mode)',
+  });
+});
+

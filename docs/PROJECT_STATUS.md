@@ -17,7 +17,7 @@ next session pick up exactly where the last one left off.
 
 ## Current phase
 
-`Phase 4 completed — ready for Phase 5 (Realtime whiteboard sync)`
+`Phase 5 completed — ready for Phase 6 (File upload & annotation layer)`
 
 ## Environment status
 
@@ -41,29 +41,34 @@ next session pick up exactly where the last one left off.
   - Built custom right-rail vertical icon toolbar [client/src/components/whiteboard/WhiteboardToolbar.tsx](file:///d:/sagar/studyboard/client/src/components/whiteboard/WhiteboardToolbar.tsx) per `/docs/DESIGN.md`:
     - Select, Pen, Highlighter, Eraser, Shapes (Rectangle, Ellipse, Triangle, Diamond, Arrow, Line), Text, Sticky Note, Palette (color & stroke size flyout), Undo, Redo.
   - Added canvas-anchored corner buttons: "upload file" (bottom-left), "fork my board" (bottom-right), and zoom level controls (+ / - / 100% / fit).
-  - Built-in keyboard shortcuts: `V` (select), `P` (pen), `H` (highlighter), `E` (eraser), `R` (shapes), `T` (text), `N` (sticky note), `Ctrl/Cmd+Z` (undo), `Ctrl/Cmd+Shift+Z` (redo).
+- **Phase 5 — Multiplayer whiteboard sync (Yjs CRDT & Board Forking)**:
+  - Backend Yjs WebSocket server in [server/src/ws/yjs.ts](file:///d:/sagar/studyboard/server/src/ws/yjs.ts) supporting binary sync protocol (step 1, step 2, update, awareness).
+  - Upgraded HTTP server in [server/src/index.ts](file:///d:/sagar/studyboard/server/src/index.ts) to cleanly route `/ws` (presence) and `/yjs` (whiteboard sync).
+  - Added board management and forking API endpoints (`GET /api/rooms/:id/boards`, `POST /api/rooms/:id/boards/fork`) in [server/src/routes/rooms.ts](file:///d:/sagar/studyboard/server/src/routes/rooms.ts).
+  - Built React Yjs sync hook [client/src/lib/yjs-sync.ts](file:///d:/sagar/studyboard/client/src/lib/yjs-sync.ts) synchronizing `tldraw` store records (`shape`, `binding`, `asset`, `page`) with `Y.Doc` (`Y.Map`).
+  - Implemented the "fork my own copy" feature in [client/src/components/whiteboard/WhiteboardCanvas.tsx](file:///d:/sagar/studyboard/client/src/components/whiteboard/WhiteboardCanvas.tsx) with a private workspace mode, top banner indicator, and one-click toggle between shared and personal boards.
 
 ## Currently in progress
 
-*(none — Phase 4 is completed and building cleanly with zero errors)*
+*(none — Phase 5 is completed, verified, and building cleanly with zero errors)*
 
 ## Files touched this session
 
-- `client/package.json` — Added `@tldraw/tldraw`
-- `client/src/index.css` — Imported `@tldraw/tldraw/tldraw.css`
-- `client/src/components/whiteboard/WhiteboardToolbar.tsx` — Created custom right vertical icon toolbar & style popovers adhering to `/docs/DESIGN.md`
-- `client/src/components/whiteboard/WhiteboardCanvas.tsx` — Created canvas component integrating Tldraw, tool state sync, and corner action buttons
-- `client/src/components/whiteboard/index.ts` — Whiteboard exports
-- `client/src/components/room/RoomView.tsx` — Mounted WhiteboardCanvas as dominant center canvas
+- `server/package.json` — Added `yjs`, `y-websocket`
+- `server/src/ws/yjs.ts` — Created Yjs WebSocket sync server
+- `server/src/ws/server.ts` — Updated presence WebSocket server to support upgrade routing
+- `server/src/index.ts` — Attached upgrade router for `/ws` and `/yjs`
+- `server/src/routes/rooms.ts` — Added `GET /api/rooms/:id/boards` and `POST /api/rooms/:id/boards/fork`
+- `client/package.json` — Added `yjs`, `y-websocket`
+- `client/src/lib/api.ts` — Added `fetchBoards` and `forkBoard`
+- `client/src/lib/yjs-sync.ts` — Created `useYjsWhiteboardSync` hook for tldraw store <-> Yjs synchronization
+- `client/src/components/whiteboard/WhiteboardCanvas.tsx` — Integrated live Yjs multiplayer sync, live/syncing badge, and board forking
+- `client/src/components/room/RoomView.tsx` — Passed roomId, user, and session info to WhiteboardCanvas
 
 ## Known issues / things to revisit
 
-- Whiteboard drawings are currently local to the client (multiplayer synchronization is the subject of Phase 5 with Yjs / CRDT).
-
-## Decisions made outside the original docs
-
-- Used `Tldraw` with `hideUi={true}` rather than creating a canvas from scratch so we retain first-class infinite canvas capabilities, stylus pressure curves, shape geometry, and direct compatibility with Yjs sync bindings in Phase 5, while driving the UI entirely through our custom StudySync toolbar.
+- File uploads & PDF annotation layer to be built in Phase 6.
 
 ## Next session should start with
 
-Start with Phase 5 from BUILD_PROMPTS.md — multiplayer realtime whiteboard sync using Yjs (y-websocket or custom Yjs provider) and the "fork my own copy" feature.
+Start with Phase 6 from BUILD_PROMPTS.md — file upload onto the whiteboard (images, PDFs, documents) with Supabase Storage, multi-page PDF conversion, and an independent toggleable/undoable annotation layer.
