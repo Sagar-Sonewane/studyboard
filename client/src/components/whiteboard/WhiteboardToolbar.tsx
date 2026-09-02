@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import type { Editor } from '@tldraw/tldraw';
-import { DefaultColorStyle, DefaultSizeStyle } from '@tldraw/tlschema';
+import { DefaultColorStyle, DefaultSizeStyle, DefaultDashStyle, GeoShapeGeoStyle } from '@tldraw/tlschema';
 import {
   MousePointer,
   PenTool,
@@ -17,6 +17,9 @@ import {
   Redo2,
   Palette,
   Minus,
+  Lock,
+  Hand,
+  Check,
 } from 'lucide-react';
 
 export type ActiveTool =
@@ -41,6 +44,7 @@ export type WhiteboardColor =
   | 'violet';
 
 export type WhiteboardSize = 's' | 'm' | 'l' | 'xl';
+export type WhiteboardDash = 'draw' | 'solid' | 'dashed' | 'dotted';
 
 interface WhiteboardToolbarProps {
   editor: Editor | null;
@@ -48,6 +52,10 @@ interface WhiteboardToolbarProps {
   onToolSelect: (tool: string, geoType?: string) => void;
   canUndo?: boolean;
   canRedo?: boolean;
+  canDraw?: boolean;
+  onRequestDraw?: () => void;
+  drawRequestSent?: boolean;
+  drawRequestFeedback?: string | null;
 }
 
 // Curated StudySync Color Palette
@@ -70,13 +78,21 @@ const SIZES: { label: string; value: WhiteboardSize; dotSize: string }[] = [
   { label: 'extra large', value: 'xl', dotSize: 'w-4.5 h-4.5' },
 ];
 
+// Stroke dash patterns
+const DASH_STYLES: { label: string; value: WhiteboardDash; lineClass: string }[] = [
+  { label: 'solid', value: 'solid', lineClass: 'border-t-2 border-current w-5' },
+  { label: 'dashed', value: 'dashed', lineClass: 'border-t-2 border-dashed border-current w-5' },
+  { label: 'dotted', value: 'dotted', lineClass: 'border-t-2 border-dotted border-current w-5' },
+  { label: 'draw', value: 'draw', lineClass: 'border-t-2 border-current w-5 italic font-mono' },
+];
+
 const SHAPES = [
-  { id: 'rectangle', label: 'rectangle', icon: Square },
-  { id: 'ellipse', label: 'ellipse', icon: Circle },
-  { id: 'triangle', label: 'triangle', icon: Triangle },
-  { id: 'diamond', label: 'diamond', icon: Diamond },
-  { id: 'arrow', label: 'arrow', icon: ArrowRight },
-  { id: 'line', label: 'line', icon: Minus },
+  { id: 'rectangle', label: 'rectangle', icon: Square, geoType: 'rectangle' },
+  { id: 'ellipse', label: 'ellipse', icon: Circle, geoType: 'ellipse' },
+  { id: 'triangle', label: 'triangle', icon: Triangle, geoType: 'triangle' },
+  { id: 'diamond', label: 'diamond', icon: Diamond, geoType: 'diamond' },
+  { id: 'arrow', label: 'arrow', icon: ArrowRight, geoType: undefined },
+  { id: 'line', label: 'line', icon: Minus, geoType: undefined },
 ];
 
 export const WhiteboardToolbar: React.FC<WhiteboardToolbarProps> = ({
@@ -85,12 +101,17 @@ export const WhiteboardToolbar: React.FC<WhiteboardToolbarProps> = ({
   onToolSelect,
   canUndo = true,
   canRedo = true,
+  canDraw = true,
+  onRequestDraw,
+  drawRequestSent = false,
+  drawRequestFeedback = null,
 }) => {
   const [shapesMenuOpen, setShapesMenuOpen] = useState(false);
   const [paletteMenuOpen, setPaletteMenuOpen] = useState(false);
   const [selectedShape, setSelectedShape] = useState('rectangle');
   const [selectedColor, setSelectedColor] = useState<WhiteboardColor>('black');
   const [selectedSize, setSelectedSize] = useState<WhiteboardSize>('m');
+  const [selectedDash, setSelectedDash] = useState<WhiteboardDash>('draw');
 
   const shapesRef = useRef<HTMLDivElement>(null);
   const paletteRef = useRef<HTMLDivElement>(null);
@@ -118,6 +139,10 @@ export const WhiteboardToolbar: React.FC<WhiteboardToolbarProps> = ({
       onToolSelect('line');
     } else {
       onToolSelect('geo', shapeId);
+      if (editor) {
+        editor.setStyleForNextShapes(GeoShapeGeoStyle, shapeId as any);
+        editor.setStyleForSelectedShapes(GeoShapeGeoStyle, shapeId as any);
+      }
     }
   };
 
@@ -137,6 +162,14 @@ export const WhiteboardToolbar: React.FC<WhiteboardToolbarProps> = ({
     }
   };
 
+  const handleDashChange = (dash: WhiteboardDash) => {
+    setSelectedDash(dash);
+    if (editor) {
+      editor.setStyleForNextShapes(DefaultDashStyle, dash as any);
+      editor.setStyleForSelectedShapes(DefaultDashStyle, dash as any);
+    }
+  };
+
   const handleUndo = () => {
     if (editor) {
       editor.undo();
@@ -148,6 +181,47 @@ export const WhiteboardToolbar: React.FC<WhiteboardToolbarProps> = ({
       editor.redo();
     }
   };
+
+  // When participant does not have draw permission (Locked Mode)
+  if (!canDraw) {
+    return (
+      <aside className="fixed md:absolute right-3 top-1/2 -translate-y-1/2 z-30 select-none flex flex-col gap-2 items-end">
+        <div className="bg-white/95 backdrop-blur-sm p-2 rounded-2xl border hairline-border shadow-xs flex flex-col items-center gap-2 max-w-[140px] text-center">
+          <div className="w-8 h-8 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-500">
+            <Lock className="w-4 h-4" />
+          </div>
+
+          <div className="text-[11px] font-medium text-neutral-600 leading-tight">
+            drawing locked
+          </div>
+
+          <button
+            onClick={onRequestDraw}
+            disabled={drawRequestSent}
+            className="w-full py-1.5 px-2 bg-indigo-600 text-white hover:bg-indigo-700 disabled:bg-neutral-200 disabled:text-neutral-500 rounded-xl text-[11px] font-medium transition-colors flex items-center justify-center gap-1 cursor-pointer disabled:cursor-default"
+          >
+            {drawRequestSent ? (
+              <>
+                <Check className="w-3 h-3 text-emerald-300" />
+                <span>sent</span>
+              </>
+            ) : (
+              <>
+                <Hand className="w-3 h-3" />
+                <span>request to draw</span>
+              </>
+            )}
+          </button>
+        </div>
+
+        {drawRequestFeedback && (
+          <div className="bg-neutral-900 text-white text-[11px] px-2.5 py-1 rounded-lg shadow-md animate-in fade-in slide-in-from-right-1 duration-150">
+            {drawRequestFeedback}
+          </div>
+        )}
+      </aside>
+    );
+  }
 
   const isGeoActive = activeTool === 'geo' || activeTool === 'arrow' || activeTool === 'line';
 
@@ -252,8 +326,8 @@ export const WhiteboardToolbar: React.FC<WhiteboardToolbarProps> = ({
                   <button
                     key={shape.id}
                     onClick={() => handleShapeSelect(shape.id)}
-                    className={`p-2 rounded-lg text-neutral-600 hover:text-neutral-900 transition-colors ${
-                      isSelected ? 'bg-indigo-50 text-indigo-600' : 'hover:bg-neutral-100'
+                    className={`p-2 rounded-lg text-neutral-600 hover:text-neutral-900 transition-colors cursor-pointer ${
+                      isSelected ? 'bg-indigo-50 text-indigo-600 font-semibold' : 'hover:bg-neutral-100'
                     }`}
                     title={shape.label}
                   >
@@ -296,7 +370,7 @@ export const WhiteboardToolbar: React.FC<WhiteboardToolbarProps> = ({
         {/* Hairline Divider */}
         <div className="h-px bg-neutral-200 my-1 mx-1" />
 
-        {/* 8. Palette & Styling Popover */}
+        {/* 8. Palette & Styling Popover (Color, Stroke Size, Dash Style) */}
         <div className="relative" ref={paletteRef}>
           <button
             onClick={() => setPaletteMenuOpen((prev) => !prev)}
@@ -305,14 +379,15 @@ export const WhiteboardToolbar: React.FC<WhiteboardToolbarProps> = ({
                 ? 'bg-indigo-50 text-indigo-600'
                 : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
             }`}
-            title="color and stroke style"
+            title="color, stroke size and dash style"
           >
             <Palette className="w-4 h-4" />
           </button>
 
           {/* Palette Flyout */}
           {paletteMenuOpen && (
-            <div className="absolute right-12 top-0 bg-white border hairline-border rounded-2xl p-3 shadow-md z-40 w-48 animate-in fade-in zoom-in-95 duration-100 space-y-3">
+            <div className="absolute right-12 top-0 bg-white border hairline-border rounded-2xl p-3 shadow-md z-40 w-52 animate-in fade-in zoom-in-95 duration-100 space-y-3">
+              {/* Color Selection */}
               <div>
                 <span className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider block mb-1.5">
                   color
@@ -333,6 +408,7 @@ export const WhiteboardToolbar: React.FC<WhiteboardToolbarProps> = ({
                 </div>
               </div>
 
+              {/* Stroke Size Selection */}
               <div className="border-t hairline-border pt-2">
                 <span className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider block mb-1.5">
                   stroke size
@@ -350,6 +426,29 @@ export const WhiteboardToolbar: React.FC<WhiteboardToolbarProps> = ({
                       title={s.label}
                     >
                       <div className={`rounded-full bg-current ${s.dotSize}`} />
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Dash Style Selection */}
+              <div className="border-t hairline-border pt-2">
+                <span className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider block mb-1.5">
+                  dash style
+                </span>
+                <div className="grid grid-cols-4 gap-1 bg-neutral-50 p-1 rounded-xl border hairline-border">
+                  {DASH_STYLES.map((d) => (
+                    <button
+                      key={d.value}
+                      onClick={() => handleDashChange(d.value)}
+                      className={`py-1.5 px-1 rounded-lg flex items-center justify-center text-xs transition-colors cursor-pointer ${
+                        selectedDash === d.value
+                          ? 'bg-white shadow-xs text-indigo-600 font-medium'
+                          : 'text-neutral-500 hover:text-neutral-800'
+                      }`}
+                      title={d.label}
+                    >
+                      <div className={d.lineClass} />
                     </button>
                   ))}
                 </div>

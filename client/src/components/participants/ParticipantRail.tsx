@@ -11,6 +11,8 @@ import {
   Users,
   LogOut,
   Volume2,
+  PenTool,
+  Lock,
 } from 'lucide-react';
 
 export type RailState = 'expanded' | 'collapsed' | 'hidden';
@@ -20,6 +22,7 @@ const RAIL_STORAGE_KEY = 'studysync_rail_state';
 interface ParticipantRailProps {
   participants: ParticipantState[];
   currentParticipantId: string;
+  isHost?: boolean;
   isMuted: boolean;
   isSpeaking: boolean;
   voiceStatus: VoiceConnectionState;
@@ -28,31 +31,14 @@ interface ParticipantRailProps {
   onToggleMute: () => void;
   onLeaveRoom: () => void;
   onToggleSimulateSpeak?: () => void;
-}
-
-// Consistent curated avatar colors
-const AVATAR_COLORS = [
-  'bg-indigo-500 text-white',
-  'bg-emerald-500 text-white',
-  'bg-amber-500 text-white',
-  'bg-violet-500 text-white',
-  'bg-rose-500 text-white',
-  'bg-cyan-500 text-white',
-  'bg-blue-500 text-white',
-];
-
-function getAvatarColor(name: string): string {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  const index = Math.abs(hash) % AVATAR_COLORS.length;
-  return AVATAR_COLORS[index];
+  onGrantDrawPermission?: (participantId: string) => void;
+  onRevokeDrawPermission?: (participantId: string) => void;
 }
 
 export const ParticipantRail: React.FC<ParticipantRailProps> = ({
   participants,
   currentParticipantId,
+  isHost = false,
   isMuted,
   isSpeaking,
   voiceStatus,
@@ -61,6 +47,8 @@ export const ParticipantRail: React.FC<ParticipantRailProps> = ({
   onToggleMute,
   onLeaveRoom,
   onToggleSimulateSpeak,
+  onGrantDrawPermission,
+  onRevokeDrawPermission,
 }) => {
   // Retrieve saved preference or default to expanded
   const [railState, setRailState] = useState<RailState>(() => {
@@ -80,7 +68,11 @@ export const ParticipantRail: React.FC<ParticipantRailProps> = ({
     if (p.participantId === currentParticipantId) {
       return isSpeaking || p.speaking || speakingIdentities.has(p.participantId);
     }
-    return p.speaking || speakingIdentities.has(p.participantId) || (p.userId ? speakingIdentities.has(p.userId) : false);
+    return (
+      p.speaking ||
+      speakingIdentities.has(p.participantId) ||
+      (p.userId ? speakingIdentities.has(p.userId) : false)
+    );
   };
 
   // Helper to check if a participant is muted
@@ -88,7 +80,11 @@ export const ParticipantRail: React.FC<ParticipantRailProps> = ({
     if (p.participantId === currentParticipantId) {
       return isMuted;
     }
-    return p.muted || mutedIdentities.has(p.participantId) || (p.userId ? mutedIdentities.has(p.userId) : false);
+    return (
+      p.muted ||
+      mutedIdentities.has(p.participantId) ||
+      (p.userId ? mutedIdentities.has(p.userId) : false)
+    );
   };
 
   // State 3: Hidden floating pill (anchored top-left of canvas per DESIGN.md)
@@ -106,9 +102,10 @@ export const ParticipantRail: React.FC<ParticipantRailProps> = ({
               return (
                 <div
                   key={p.participantId}
-                  className={`inline-block h-5 w-5 rounded-full ring-2 ring-white flex items-center justify-center text-[9px] font-semibold ${getAvatarColor(
-                    p.displayName
-                  )} ${speaking ? 'ring-emerald-400 ring-offset-0 animate-pulse' : ''}`}
+                  style={{ backgroundColor: p.color || '#4f46e5' }}
+                  className={`inline-block h-5 w-5 rounded-full ring-2 ring-white flex items-center justify-center text-[9px] font-semibold text-white ${
+                    speaking ? 'ring-emerald-400 ring-offset-0 animate-pulse' : ''
+                  }`}
                 >
                   {p.displayName.slice(0, 1).toUpperCase()}
                 </div>
@@ -152,15 +149,16 @@ export const ParticipantRail: React.FC<ParticipantRailProps> = ({
               return (
                 <div key={p.participantId} className="relative group flex justify-center">
                   <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold relative ${getAvatarColor(
-                      p.displayName
-                    )} ${speaking ? 'ring-2 ring-emerald-500 ring-offset-1 animate-pulse' : ''}`}
+                    style={{ backgroundColor: p.color || '#4f46e5' }}
+                    className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold text-white relative ${
+                      speaking ? 'ring-2 ring-emerald-500 ring-offset-1 animate-pulse' : ''
+                    }`}
                   >
                     {p.displayName.slice(0, 2).toUpperCase()}
 
                     {p.isHost && (
-                      <div className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-amber-400 flex items-center justify-center text-white">
-                        <Crown className="w-2.5 h-2.5 text-amber-900" />
+                      <div className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-amber-400 flex items-center justify-center text-white shadow-xs">
+                        <Crown className="w-2.5 h-2.5 text-amber-950" />
                       </div>
                     )}
                   </div>
@@ -170,6 +168,12 @@ export const ParticipantRail: React.FC<ParticipantRailProps> = ({
                     <span>{p.displayName}</span>
                     {isSelf && <span className="text-neutral-400">(you)</span>}
                     {p.isHost && <span className="text-amber-300">· host</span>}
+                    <span className="text-neutral-400">·</span>
+                    {p.canDraw ? (
+                      <span className="text-emerald-300 text-[10px]">can draw</span>
+                    ) : (
+                      <span className="text-neutral-400 text-[10px]">locked</span>
+                    )}
                     <span className="text-neutral-400">·</span>
                     {muted ? (
                       <span className="text-rose-300 text-[10px]">muted</span>
@@ -259,9 +263,10 @@ export const ParticipantRail: React.FC<ParticipantRailProps> = ({
                 {/* Left: Avatar & Info */}
                 <div className="flex items-center gap-2.5 min-w-0">
                   <div
-                    className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 relative ${getAvatarColor(
-                      p.displayName
-                    )} ${speaking ? 'ring-2 ring-emerald-500 ring-offset-1 animate-pulse' : ''}`}
+                    style={{ backgroundColor: p.color || '#4f46e5' }}
+                    className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0 relative ${
+                      speaking ? 'ring-2 ring-emerald-500 ring-offset-1 animate-pulse' : ''
+                    }`}
                   >
                     {p.displayName.slice(0, 2).toUpperCase()}
                   </div>
@@ -269,7 +274,9 @@ export const ParticipantRail: React.FC<ParticipantRailProps> = ({
                   <div className="truncate">
                     <div className="text-xs font-medium text-neutral-900 truncate flex items-center gap-1">
                       <span className="truncate">{p.displayName}</span>
-                      {isSelf && <span className="text-[10px] text-neutral-400 font-normal shrink-0">(you)</span>}
+                      {isSelf && (
+                        <span className="text-[10px] text-neutral-400 font-normal shrink-0">(you)</span>
+                      )}
                     </div>
                     <div className="text-[10px] text-neutral-400 flex items-center gap-1">
                       {p.isHost ? (
@@ -285,14 +292,51 @@ export const ParticipantRail: React.FC<ParticipantRailProps> = ({
                   </div>
                 </div>
 
-                {/* Right: Mic status icon inline in each row per DESIGN.md */}
+                {/* Right: Draw permission status & Mic status icon inline */}
                 <div className="flex items-center gap-1 shrink-0 ml-1">
+                  {/* Draw Permission status icon (host can toggle for guests) */}
+                  {!p.isHost && (
+                    <button
+                      onClick={() => {
+                        if (!isHost) return;
+                        if (p.canDraw) {
+                          onRevokeDrawPermission?.(p.participantId);
+                        } else {
+                          onGrantDrawPermission?.(p.participantId);
+                        }
+                      }}
+                      disabled={!isHost}
+                      className={`p-1 rounded-md transition-colors ${
+                        isHost ? 'cursor-pointer hover:bg-neutral-100' : 'cursor-default'
+                      } ${p.canDraw ? 'text-indigo-600' : 'text-neutral-300'}`}
+                      title={
+                        p.canDraw
+                          ? isHost
+                            ? 'draw permission active (click to revoke)'
+                            : 'draw permission active'
+                          : isHost
+                          ? 'drawing locked (click to grant)'
+                          : 'drawing locked'
+                      }
+                    >
+                      {p.canDraw ? (
+                        <PenTool className="w-3.5 h-3.5" />
+                      ) : (
+                        <Lock className="w-3.5 h-3.5" />
+                      )}
+                    </button>
+                  )}
+
+                  {/* Mic status icon */}
                   {muted ? (
                     <div className="p-1 rounded-md text-neutral-400" title="microphone muted">
                       <MicOff className="w-3.5 h-3.5 text-neutral-400" />
                     </div>
                   ) : speaking ? (
-                    <div className="p-1 rounded-md text-emerald-600 animate-pulse bg-emerald-50" title="speaking now">
+                    <div
+                      className="p-1 rounded-md text-emerald-600 animate-pulse bg-emerald-50"
+                      title="speaking now"
+                    >
                       <Volume2 className="w-3.5 h-3.5 text-emerald-600" />
                     </div>
                   ) : (
@@ -338,7 +382,9 @@ export const ParticipantRail: React.FC<ParticipantRailProps> = ({
             <button
               onClick={onToggleSimulateSpeak}
               className={`text-[10px] px-1.5 py-0.5 rounded border hairline-border cursor-pointer ${
-                isSpeaking ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'text-neutral-500 hover:bg-neutral-50'
+                isSpeaking
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                  : 'text-neutral-500 hover:bg-neutral-50'
               }`}
               title="test speaking indicator"
             >

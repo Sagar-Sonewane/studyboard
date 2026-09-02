@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Tldraw, Editor } from '@tldraw/tldraw';
 import { GeoShapeGeoStyle } from '@tldraw/tlschema';
 import { WhiteboardToolbar } from './WhiteboardToolbar';
@@ -14,6 +14,9 @@ import {
   Lock,
   ArrowLeft,
   CheckCircle2,
+  Eye,
+  EyeOff,
+  User,
 } from 'lucide-react';
 
 interface WhiteboardCanvasProps {
@@ -22,8 +25,13 @@ interface WhiteboardCanvasProps {
     id?: string;
     displayName: string;
     color?: string;
+    isHost?: boolean;
   };
   token?: string | null;
+  canDraw?: boolean;
+  onRequestDraw?: () => void;
+  drawRequestSent?: boolean;
+  drawRequestFeedback?: string | null;
   onUploadFile?: () => void;
 }
 
@@ -31,6 +39,10 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
   roomId,
   user,
   token,
+  canDraw = true,
+  onRequestDraw,
+  drawRequestSent = false,
+  drawRequestFeedback = null,
   onUploadFile,
 }) => {
   const [isForked, setIsForked] = useState(false);
@@ -41,6 +53,11 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
   const [canRedo, setCanRedo] = useState(false);
   const [isForking, setIsForking] = useState(false);
 
+  // Follow-host camera state (non-hosts default to following on join)
+  const isHost = Boolean(user?.isHost);
+  const [isFollowingHost, setIsFollowingHost] = useState(!isHost);
+  const [selectedAuthor, setSelectedAuthor] = useState<{ name: string; color: string } | null>(null);
+
   // Yjs synchronization hook
   const { editor, onEditorMount, syncState } = useYjsWhiteboardSync({
     roomId,
@@ -49,15 +66,60 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
     user,
   });
 
+  const isUpdatingCameraProgrammatically = useRef(false);
+
+  // Sync readonly state with canDraw permission
+  useEffect(() => {
+    if (!editor) return;
+    try {
+      editor.updateInstanceState({ isReadonly: !canDraw });
+    } catch {
+      // ignore
+    }
+  }, [editor, canDraw]);
+
+  // Follow-host viewport synchronization
+  useEffect(() => {
+    if (!editor || isHost || !isFollowingHost || !syncState.hostCamera || isForked) {
+      return;
+    }
+
+    const hostCam = syncState.hostCamera;
+    const currentCam = editor.getCamera();
+
+    // Only update if difference is meaningful
+    const dx = Math.abs(currentCam.x - hostCam.x);
+    const dy = Math.abs(currentCam.y - hostCam.y);
+    const dz = Math.abs(currentCam.z - hostCam.z);
+
+    if (dx > 1 || dy > 1 || dz > 0.01) {
+      isUpdatingCameraProgrammatically.current = true;
+      try {
+        editor.setCamera({ x: hostCam.x, y: hostCam.y, z: hostCam.z }, { animation: { duration: 120 } });
+        setZoomLevel(Math.round(hostCam.z * 100));
+      } finally {
+        setTimeout(() => {
+          isUpdatingCameraProgrammatically.current = false;
+        }, 150);
+      }
+    }
+  }, [editor, isHost, isFollowingHost, syncState.hostCamera, isForked]);
+
   const handleMount = useCallback(
     (editorInstance: Editor) => {
       onEditorMount(editorInstance);
 
       // Set initial tool
-      editorInstance.setCurrentTool('draw');
-      setActiveTool('draw');
+      if (canDraw) {
+        editorInstance.setCurrentTool('draw');
+        setActiveTool('draw');
+      } else {
+        editorInstance.updateInstanceState({ isReadonly: true });
+        editorInstance.setCurrentTool('select');
+        setActiveTool('select');
+      }
 
-      // Subscribe to tool changes & history changes
+      // Subscribe to tool changes, history changes, and shape selection attribution
       const cleanup = editorInstance.store.listen(() => {
         try {
           const currentToolId = editorInstance.getCurrentToolId();
@@ -65,6 +127,17 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
           setCanUndo(editorInstance.getCanUndo());
           setCanRedo(editorInstance.getCanRedo());
           setZoomLevel(Math.round(editorInstance.getZoomLevel() * 100));
+
+          // Check selected shape author attribution
+          const selected = editorInstance.getSelectedShapes();
+          if (selected.length === 1 && (selected[0] as any)?.meta?.authorName) {
+            setSelectedAuthor({
+              name: (selected[0] as any).meta.authorName,
+              color: (selected[0] as any).meta.authorColor || '#4f46e5',
+            });
+          } else {
+            setSelectedAuthor(null);
+          }
         } catch {
           // ignore
         }
@@ -74,20 +147,23 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
         cleanup();
       };
     },
-    [onEditorMount]
+    [onEditorMount, canDraw]
   );
 
   const handleToolSelect = useCallback(
     (tool: string, geoType?: string) => {
-      if (!editor) return;
+      if (!editor || !canDraw) return;
 
       try {
         if (tool === 'geo') {
           editor.setCurrentTool('geo');
-          if (geoType) {
-            editor.setStyleForNextShapes(GeoShapeGeoStyle, geoType as any);
-            editor.setStyleForSelectedShapes(GeoShapeGeoStyle, geoType as any);
-          }
+          const targetGeo = geoType || 'rectangle';
+          editor.setStyleForNextShapes(GeoShapeGeoStyle, targetGeo as any);
+          editor.setStyleForSelectedShapes(GeoShapeGeoStyle, targetGeo as any);
+        } else if (tool === 'arrow') {
+          editor.setCurrentTool('arrow');
+        } else if (tool === 'line') {
+          editor.setCurrentTool('line');
         } else {
           editor.setCurrentTool(tool as any);
         }
@@ -96,7 +172,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
         console.error('[Whiteboard] Failed to set tool:', err);
       }
     },
-    [editor]
+    [editor, canDraw]
   );
 
   // Fork shared board into a private copy
@@ -122,9 +198,10 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
     setForkedBoardId(null);
   };
 
-  // Zoom helpers
+  // Zoom helpers (breaking away from host follow)
   const handleZoomIn = () => {
     if (editor) {
+      setIsFollowingHost(false);
       editor.zoomIn();
       setZoomLevel(Math.round(editor.getZoomLevel() * 100));
     }
@@ -132,6 +209,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
 
   const handleZoomOut = () => {
     if (editor) {
+      setIsFollowingHost(false);
       editor.zoomOut();
       setZoomLevel(Math.round(editor.getZoomLevel() * 100));
     }
@@ -139,6 +217,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
 
   const handleResetZoom = () => {
     if (editor) {
+      setIsFollowingHost(false);
       editor.resetZoom();
       setZoomLevel(100);
     }
@@ -146,8 +225,17 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
 
   const handleZoomToFit = () => {
     if (editor) {
+      setIsFollowingHost(false);
       editor.zoomToFit();
       setZoomLevel(Math.round(editor.getZoomLevel() * 100));
+    }
+  };
+
+  const handleJumpToHost = () => {
+    if (syncState.hostCamera && editor) {
+      editor.setCamera(syncState.hostCamera, { animation: { duration: 200 } });
+      setZoomLevel(Math.round(syncState.hostCamera.z * 100));
+      setIsFollowingHost(true);
     }
   };
 
@@ -170,24 +258,70 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
           </button>
         </div>
       ) : (
-        /* Top Status Indicator for Shared Board Sync */
-        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 hidden sm:flex items-center gap-1.5 px-3 py-1 bg-white/90 backdrop-blur-sm border hairline-border rounded-full shadow-xs text-[11px] font-medium text-neutral-600">
-          {syncState.isConnected ? (
-            <>
-              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>multiplayer live</span>
-            </>
-          ) : (
-            <>
-              <Radio className="w-3 h-3 text-neutral-400 animate-spin" />
-              <span>connecting sync...</span>
-            </>
+        /* Top Status Indicator & Follow-Host Controls for Shared Board */
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 hidden sm:flex items-center gap-2">
+          {/* Live Sync Status */}
+          <div className="flex items-center gap-1.5 px-3 py-1 bg-white/90 backdrop-blur-sm border hairline-border rounded-full shadow-xs text-[11px] font-medium text-neutral-600">
+            {syncState.isConnected ? (
+              <>
+                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span>multiplayer live</span>
+              </>
+            ) : (
+              <>
+                <Radio className="w-3 h-3 text-neutral-400 animate-spin" />
+                <span>connecting sync...</span>
+              </>
+            )}
+          </div>
+
+          {/* Follow-Host Viewport Pill (for non-hosts) */}
+          {!isHost && (
+            <div className="flex items-center gap-1.5 px-3 py-1 bg-white/90 backdrop-blur-sm border hairline-border rounded-full shadow-xs text-[11px] font-medium">
+              {isFollowingHost ? (
+                <div className="flex items-center gap-1.5 text-indigo-600">
+                  <Eye className="w-3.5 h-3.5 text-indigo-500 animate-pulse" />
+                  <span>following host</span>
+                  <button
+                    onClick={() => setIsFollowingHost(false)}
+                    className="ml-1 text-[10px] text-neutral-400 hover:text-neutral-700 transition-colors cursor-pointer"
+                    title="stop following host viewport"
+                  >
+                    <EyeOff className="w-3 h-3" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={handleJumpToHost}
+                  className="flex items-center gap-1 text-neutral-600 hover:text-indigo-600 transition-colors cursor-pointer"
+                  title="snap and follow host viewport"
+                >
+                  <Eye className="w-3.5 h-3.5 text-neutral-400" />
+                  <span>jump to host</span>
+                </button>
+              )}
+            </div>
           )}
         </div>
       )}
 
+      {/* Selected Shape Author Attribution Tooltip */}
+      {selectedAuthor && (
+        <div className="absolute top-14 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 px-3 py-1 bg-neutral-900/90 backdrop-blur-sm text-white text-[11px] font-medium rounded-full shadow-md animate-in fade-in duration-150">
+          <div
+            style={{ backgroundColor: selectedAuthor.color }}
+            className="w-2 h-2 rounded-full"
+          />
+          <User className="w-3 h-3 text-neutral-400" />
+          <span>created by {selectedAuthor.name}</span>
+        </div>
+      )}
+
       {/* Tldraw Canvas Engine with hidden default UI */}
-      <div className="absolute inset-0 z-0" key={isForked ? `forked-${forkedBoardId}` : `shared-${roomId}`}>
+      <div
+        className="absolute inset-0 z-0"
+        key={isForked ? `forked-${forkedBoardId}` : `shared-${roomId}`}
+      >
         <Tldraw
           hideUi
           onMount={handleMount}
@@ -202,13 +336,18 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
         onToolSelect={handleToolSelect}
         canUndo={canUndo}
         canRedo={canRedo}
+        canDraw={canDraw}
+        onRequestDraw={onRequestDraw}
+        drawRequestSent={drawRequestSent}
+        drawRequestFeedback={drawRequestFeedback}
       />
 
       {/* Canvas-Anchored Action: Upload File (bottom-left corner per DESIGN.md) */}
       <div className="absolute bottom-4 left-4 z-20 hidden sm:block">
         <button
           onClick={onUploadFile}
-          className="flex items-center gap-1.5 px-3 py-2 bg-white/95 backdrop-blur-sm border hairline-border rounded-xl text-xs font-medium text-neutral-700 hover:bg-neutral-50 shadow-xs transition-colors cursor-pointer"
+          disabled={!canDraw}
+          className="flex items-center gap-1.5 px-3 py-2 bg-white/95 backdrop-blur-sm border hairline-border rounded-xl text-xs font-medium text-neutral-700 hover:bg-neutral-50 shadow-xs transition-colors cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
           title="upload document, image, or PDF"
         >
           <UploadCloud className="w-3.5 h-3.5 text-indigo-600" />

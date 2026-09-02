@@ -164,6 +164,73 @@ edit privately, without affecting the shared board.
 
 ---
 
+## Phase 5.1 — Whiteboard collaboration controls (fixes found after Phase 5 testing)
+
+```
+Read first: /docs/PROJECT_STATUS.md in full — note the correction there:
+Phase 4 was logged as having a working Shapes flyout (ellipse, triangle,
+diamond, arrow, line) but hands-on testing found only rectangle actually
+works. Don't trust that earlier claim; verify by testing yourself. Also
+read /docs/PRODUCT.md ("Whiteboard collaboration controls" section),
+/docs/DESIGN.md ("Draw permission UI", "Follow-host viewport indicator",
+and "Attribution" sections), and /docs/API_CONTRACT.md (the whiteboard
+event list, including presence:join's new `color` field and the new
+board:draw_permission_* events).
+
+We're using tldraw, so most of this is wiring up existing tldraw
+capability through our UI, not building drawing logic from scratch. Four
+fixes:
+
+1. Draw permission (locked by default): add participant-level draw
+   permission that defaults to false for everyone except the host. Use
+   tldraw's readonly mode (editor.updateInstanceState({ isReadonly: true }))
+   for any participant without permission — this hides/disables their
+   toolbar and blocks edits. Add a "request to draw" button shown instead
+   of the toolbar when locked. Implement the WebSocket events from
+   /docs/API_CONTRACT.md: board:draw_permission_requested (client to host),
+   and board:draw_permission_granted / denied / revoked (server broadcasts).
+   Host sees incoming requests as a non-blocking toast with Approve/Deny.
+   Host can revoke permission from the participant list at any time. This
+   state is session-scoped only — do not persist it to the database, it
+   resets to locked on reconnect.
+
+2. Follow-host viewport: participants should default to following the
+   host's camera when they join. Use tldraw's built-in
+   editor.startFollowingUser(hostUserId) — this works off tldraw's existing
+   multiplayer presence sync, no new backend event needed. Any participant
+   can break away by panning/zooming themselves or clicking "stop
+   following" on the indicator pill described in /docs/DESIGN.md. When not
+   following, show a "jump to host" pill instead for a one-click return.
+
+3. Per-user attribution: when a participant joins, the server assigns them
+   a color from a fixed palette (avoiding collisions with currently
+   connected users) and includes it in the presence:join payload per
+   /docs/API_CONTRACT.md. Use this color for their live tldraw cursor.
+   Also tag each shape/stroke with an authorId in its meta field so that
+   hovering or selecting a shape after the fact shows a small tooltip with
+   the author's name, even after their live cursor is gone.
+
+4. Shapes flyout — actually build it, and add dash style: despite an
+   earlier status note claiming rectangle/ellipse/triangle/diamond/arrow/
+   line were all working from Phase 4, hands-on testing confirmed only
+   rectangle actually works. Wire the Shapes flyout to tldraw's other
+   native shape tools (ellipse, triangle, diamond, arrow, line) — these
+   already exist in tldraw, this is UI wiring to expose them via the
+   flyout, not building shape-drawing logic from scratch. After fixing
+   this, click through each shape yourself and confirm it draws correctly
+   before marking it done — do not rely on "the build compiled" as
+   evidence a UI control works. Separately, the Palette flyout currently
+   only exposes color and stroke size — add tldraw's built-in dash style
+   options (solid / dashed / dotted) to that same flyout.
+
+Test all four with two simultaneous browser tabs — this phase is entirely
+about multiplayer behavior and won't show real bugs with a single client.
+For item 4 specifically, also manually click through every shape tool
+yourself; a successful build is not evidence a button works.
+```
+
+---
+
 ## Phase 6 — File upload and annotation
 
 ```

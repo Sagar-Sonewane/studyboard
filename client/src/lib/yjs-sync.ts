@@ -11,6 +11,7 @@ export interface YjsSyncOptions {
     id?: string;
     displayName: string;
     color?: string;
+    isHost?: boolean;
   };
   wsUrl?: string;
 }
@@ -21,6 +22,7 @@ export interface YjsSyncState {
   peerCount: number;
   doc: Y.Doc | null;
   provider: WebsocketProvider | null;
+  hostCamera: { x: number; y: number; z: number } | null;
 }
 
 /**
@@ -50,6 +52,7 @@ export function useYjsWhiteboardSync({
     peerCount: 1,
     doc: null,
     provider: null,
+    hostCamera: null,
   });
 
   const docRef = useRef<Y.Doc | null>(null);
@@ -89,8 +92,10 @@ export function useYjsWhiteboardSync({
       // Set user awareness info
       if (user) {
         provider.awareness.setLocalStateField('user', {
+          id: user.id,
           name: user.displayName,
           color: user.color || '#4f46e5',
+          isHost: Boolean(user.isHost),
         });
       }
 
@@ -110,9 +115,20 @@ export function useYjsWhiteboardSync({
 
       provider.awareness.on('change', () => {
         const states = provider?.awareness.getStates();
+        let currentHostCamera: { x: number; y: number; z: number } | null = null;
+
+        if (states) {
+          for (const state of states.values()) {
+            if (state?.user?.isHost && state?.camera) {
+              currentHostCamera = state.camera;
+            }
+          }
+        }
+
         setSyncState((prev) => ({
           ...prev,
           peerCount: states ? states.size : 1,
+          hostCamera: currentHostCamera,
         }));
       });
     } else {
@@ -123,6 +139,7 @@ export function useYjsWhiteboardSync({
         peerCount: 1,
         doc,
         provider: null,
+        hostCamera: null,
       });
     }
 
@@ -140,7 +157,7 @@ export function useYjsWhiteboardSync({
       doc.destroy();
       docRef.current = null;
     };
-  }, [roomId, isForked, docName, resolvedWsUrl]);
+  }, [roomId, isForked, docName, resolvedWsUrl, user?.displayName, user?.color, user?.isHost]);
 
   // Bind tldraw store <-> Yjs Y.Map
   useEffect(() => {
@@ -179,15 +196,23 @@ export function useYjsWhiteboardSync({
       }, 'tldraw-local-fork');
     }
 
-    // 2. Listen to local tldraw changes and push to Yjs
+    // 2. Listen to local tldraw changes, tag with author metadata, and push to Yjs
     const unlistenStore = store.listen(
       (entry) => {
         if (isApplyingRemote.current) return;
 
         doc.transact(() => {
-          // Added records
+          // Added records: tag author metadata
           for (const record of Object.values(entry.changes.added)) {
             if (isDocumentRecord(record)) {
+              if (record.typeName === 'shape' && !(record as any).meta?.authorName) {
+                (record as any).meta = {
+                  ...(record as any).meta,
+                  authorId: user?.id,
+                  authorName: user?.displayName || 'Participant',
+                  authorColor: user?.color || '#4f46e5',
+                };
+              }
               yRecords.set(record.id, record);
             }
           }
@@ -251,11 +276,35 @@ export function useYjsWhiteboardSync({
 
     yRecords.observe(handleYjsObserver);
 
+    // 4. If local user is host, broadcast camera position changes to Yjs awareness
+    let unlistenCamera: (() => void) | undefined;
+    if (providerRef.current && user?.isHost) {
+      const updateCameraAwareness = () => {
+        try {
+          const camera = editor.getCamera();
+          providerRef.current?.awareness.setLocalStateField('camera', {
+            x: camera.x,
+            y: camera.y,
+            z: camera.z,
+          });
+        } catch {
+          // ignore
+        }
+      };
+
+      updateCameraAwareness();
+      unlistenCamera = editor.store.listen(updateCameraAwareness, {
+        source: 'user',
+        scope: 'session',
+      });
+    }
+
     return () => {
       unlistenStore();
       yRecords.unobserve(handleYjsObserver);
+      if (unlistenCamera) unlistenCamera();
     };
-  }, [editor, docRef.current, isForked]);
+  }, [editor, docRef.current, isForked, user?.id, user?.displayName, user?.color, user?.isHost]);
 
   const onEditorMount = useCallback((editorInstance: Editor) => {
     setEditor(editorInstance);
@@ -265,5 +314,6 @@ export function useYjsWhiteboardSync({
     editor,
     onEditorMount,
     syncState,
+    provider: providerRef.current,
   };
 }

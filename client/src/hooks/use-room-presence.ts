@@ -8,9 +8,17 @@ export interface ParticipantState {
   guestName?: string | null;
   displayName: string;
   isHost: boolean;
+  canDraw: boolean;
+  color: string;
   muted: boolean;
   speaking: boolean;
   joinedAt: string;
+}
+
+export interface DrawPermissionRequest {
+  participantId: string;
+  displayName: string;
+  timestamp: string;
 }
 
 interface UseRoomPresenceOptions {
@@ -34,6 +42,11 @@ export function useRoomPresence({
   const [isConnected, setIsConnected] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [canDraw, setCanDraw] = useState<boolean>(Boolean(isHost));
+  const [myColor, setMyColor] = useState<string>(isHost ? '#d97706' : '#4f46e5');
+  const [pendingDrawRequests, setPendingDrawRequests] = useState<DrawPermissionRequest[]>([]);
+  const [drawRequestSent, setDrawRequestSent] = useState(false);
+  const [drawRequestFeedback, setDrawRequestFeedback] = useState<string | null>(null);
 
   const socketRef = useRef<WebSocket | null>(null);
   const myParticipantIdRef = useRef<string>(participantId || `p-${Date.now()}`);
@@ -87,6 +100,12 @@ export function useRoomPresence({
             if (message.payload?.participants) {
               setParticipants(message.payload.participants);
             }
+            if (message.payload?.myColor) {
+              setMyColor(message.payload.myColor);
+            }
+            if (typeof message.payload?.canDraw === 'boolean') {
+              setCanDraw(message.payload.canDraw);
+            }
             break;
           }
 
@@ -105,6 +124,7 @@ export function useRoomPresence({
             const { participantId: leftId } = message.payload || {};
             if (leftId) {
               setParticipants((prev) => prev.filter((p) => p.participantId !== leftId));
+              setPendingDrawRequests((prev) => prev.filter((r) => r.participantId !== leftId));
             }
             break;
           }
@@ -125,6 +145,67 @@ export function useRoomPresence({
               setParticipants((prev) =>
                 prev.map((p) => (p.participantId === targetId ? { ...p, speaking } : p))
               );
+            }
+            break;
+          }
+
+          case 'board:draw_permission_requested': {
+            if (isHost && message.payload) {
+              const req: DrawPermissionRequest = message.payload;
+              setPendingDrawRequests((prev) => {
+                if (prev.some((r) => r.participantId === req.participantId)) {
+                  return prev;
+                }
+                return [...prev, req];
+              });
+            }
+            break;
+          }
+
+          case 'board:draw_permission_granted': {
+            const { participantId: targetId } = message.payload || {};
+            if (targetId) {
+              setParticipants((prev) =>
+                prev.map((p) => (p.participantId === targetId ? { ...p, canDraw: true } : p))
+              );
+              setPendingDrawRequests((prev) => prev.filter((r) => r.participantId !== targetId));
+
+              if (targetId === myParticipantIdRef.current) {
+                setCanDraw(true);
+                setDrawRequestSent(false);
+                setDrawRequestFeedback('draw permission granted by host');
+                setTimeout(() => setDrawRequestFeedback(null), 3000);
+              }
+            }
+            break;
+          }
+
+          case 'board:draw_permission_denied': {
+            const { participantId: targetId } = message.payload || {};
+            if (targetId) {
+              setPendingDrawRequests((prev) => prev.filter((r) => r.participantId !== targetId));
+
+              if (targetId === myParticipantIdRef.current) {
+                setDrawRequestSent(false);
+                setDrawRequestFeedback('host declined draw request');
+                setTimeout(() => setDrawRequestFeedback(null), 3500);
+              }
+            }
+            break;
+          }
+
+          case 'board:draw_permission_revoked': {
+            const { participantId: targetId } = message.payload || {};
+            if (targetId) {
+              setParticipants((prev) =>
+                prev.map((p) => (p.participantId === targetId ? { ...p, canDraw: false } : p))
+              );
+
+              if (targetId === myParticipantIdRef.current) {
+                setCanDraw(false);
+                setDrawRequestFeedback('draw permission revoked');
+                setTimeout(() => setDrawRequestFeedback(null), 3000);
+              }
             }
             break;
           }
@@ -150,6 +231,48 @@ export function useRoomPresence({
       }
     };
   }, [roomId, userId, guestName, displayName, isHost]);
+
+  // Request draw permission (for participants)
+  const requestDrawPermission = useCallback(() => {
+    setDrawRequestSent(true);
+    setDrawRequestFeedback('request sent to host');
+    sendWsMessage('board:draw_permission_requested', {
+      participantId: myParticipantIdRef.current,
+      displayName,
+    });
+  }, [displayName, sendWsMessage]);
+
+  // Grant draw permission (for host)
+  const grantDrawPermission = useCallback(
+    (targetParticipantId: string) => {
+      sendWsMessage('board:draw_permission_granted', {
+        participantId: targetParticipantId,
+      });
+      setPendingDrawRequests((prev) => prev.filter((r) => r.participantId !== targetParticipantId));
+    },
+    [sendWsMessage]
+  );
+
+  // Deny draw permission (for host)
+  const denyDrawPermission = useCallback(
+    (targetParticipantId: string) => {
+      sendWsMessage('board:draw_permission_denied', {
+        participantId: targetParticipantId,
+      });
+      setPendingDrawRequests((prev) => prev.filter((r) => r.participantId !== targetParticipantId));
+    },
+    [sendWsMessage]
+  );
+
+  // Revoke draw permission (for host)
+  const revokeDrawPermission = useCallback(
+    (targetParticipantId: string) => {
+      sendWsMessage('board:draw_permission_revoked', {
+        participantId: targetParticipantId,
+      });
+    },
+    [sendWsMessage]
+  );
 
   // Toggle local mute
   const toggleMute = useCallback(() => {
@@ -180,8 +303,17 @@ export function useRoomPresence({
     participantCount: participants.length,
     isConnected,
     myParticipantId: myParticipantIdRef.current,
+    myColor,
     isMuted,
     isSpeaking,
+    canDraw,
+    pendingDrawRequests,
+    drawRequestSent,
+    drawRequestFeedback,
+    requestDrawPermission,
+    grantDrawPermission,
+    denyDrawPermission,
+    revokeDrawPermission,
     toggleMute,
     toggleSpeaking,
   };

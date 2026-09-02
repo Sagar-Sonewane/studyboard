@@ -1,4 +1,3 @@
-import { Server as HttpServer } from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
 import crypto from 'crypto';
 
@@ -15,9 +14,34 @@ export interface ParticipantState {
   guestName?: string | null;
   displayName: string;
   isHost: boolean;
+  canDraw: boolean;
+  color: string;
   muted: boolean;
   speaking: boolean;
   joinedAt: string;
+}
+
+const USER_COLORS = [
+  '#4f46e5', // indigo
+  '#059669', // emerald
+  '#d97706', // amber
+  '#dc2626', // rose/red
+  '#7c3aed', // violet
+  '#db2777', // pink
+  '#0284c7', // sky
+  '#ea580c', // orange
+  '#0d9488', // teal
+  '#65a30d', // lime
+];
+
+function getAssignedColor(existingParticipants: ParticipantState[]): string {
+  const usedColors = new Set(existingParticipants.map((p) => p.color));
+  for (const color of USER_COLORS) {
+    if (!usedColors.has(color)) {
+      return color;
+    }
+  }
+  return USER_COLORS[existingParticipants.length % USER_COLORS.length];
 }
 
 // Map<roomId, Map<WebSocket, ParticipantState>>
@@ -41,6 +65,46 @@ function broadcastToRoom(roomId: string, message: WSMessage, excludeWs?: WebSock
         socket.send(raw);
       } catch (err) {
         console.error(`[WS] Failed to send to socket in room ${roomId}:`, err);
+      }
+    }
+  }
+}
+
+function sendToParticipant(roomId: string, participantId: string, message: WSMessage) {
+  const roomSockets = roomConnections.get(roomId);
+  if (!roomSockets) return;
+
+  const raw = JSON.stringify({
+    ...message,
+    timestamp: message.timestamp || new Date().toISOString(),
+  });
+
+  for (const [socket, state] of roomSockets.entries()) {
+    if (state.participantId === participantId && socket.readyState === WebSocket.OPEN) {
+      try {
+        socket.send(raw);
+      } catch (err) {
+        console.error(`[WS] Failed to send to participant ${participantId}:`, err);
+      }
+    }
+  }
+}
+
+function sendToHosts(roomId: string, message: WSMessage) {
+  const roomSockets = roomConnections.get(roomId);
+  if (!roomSockets) return;
+
+  const raw = JSON.stringify({
+    ...message,
+    timestamp: message.timestamp || new Date().toISOString(),
+  });
+
+  for (const [socket, state] of roomSockets.entries()) {
+    if (state.isHost && socket.readyState === WebSocket.OPEN) {
+      try {
+        socket.send(raw);
+      } catch (err) {
+        console.error(`[WS] Failed to send to host:`, err);
       }
     }
   }
@@ -139,6 +203,13 @@ export function setupPresenceWebSocketServer(): WebSocketServer {
             // Remove from any existing room before joining new one
             handleSocketLeave(ws);
 
+            if (!roomConnections.has(roomId)) {
+              roomConnections.set(roomId, new Map());
+            }
+            const roomSockets = roomConnections.get(roomId)!;
+            const existing = Array.from(roomSockets.values());
+            const assignedColor = getAssignedColor(existing);
+
             const participantState: ParticipantState = {
               participantId,
               roomId,
@@ -146,21 +217,19 @@ export function setupPresenceWebSocketServer(): WebSocketServer {
               guestName,
               displayName,
               isHost: Boolean(isHost),
+              canDraw: Boolean(isHost), // Host can draw by default; guests locked by default
+              color: assignedColor,
               muted: Boolean(muted),
               speaking: Boolean(speaking),
               joinedAt: new Date().toISOString(),
             };
 
             // Register room socket
-            if (!roomConnections.has(roomId)) {
-              roomConnections.set(roomId, new Map());
-            }
-            const roomSockets = roomConnections.get(roomId)!;
             roomSockets.set(ws, participantState);
             socketMetadata.set(ws, { roomId, participantId });
 
             console.log(
-              `[WS] ${participantState.displayName} (${isHost ? 'Host' : 'Guest'}) joined room ${roomId}. Active peers: ${roomSockets.size}`
+              `[WS] ${participantState.displayName} (${isHost ? 'Host' : 'Guest'}) joined room ${roomId} with color ${assignedColor}. Draw permission: ${participantState.canDraw}. Active peers: ${roomSockets.size}`
             );
 
             // 1. Send complete current roster (presence:sync) to the joining client
@@ -172,6 +241,8 @@ export function setupPresenceWebSocketServer(): WebSocketServer {
                   roomId,
                   participants: allParticipants,
                   myParticipantId: participantId,
+                  myColor: assignedColor,
+                  canDraw: participantState.canDraw,
                 },
               })
             );
@@ -233,6 +304,112 @@ export function setupPresenceWebSocketServer(): WebSocketServer {
                 },
               });
             }
+            break;
+          }
+
+          case 'board:draw_permission_requested': {
+            const meta = socketMetadata.get(ws);
+            if (!meta) return;
+
+            const roomSockets = roomConnections.get(meta.roomId);
+            const participant = roomSockets?.get(ws);
+            const requesterId = data.payload?.participantId || meta.participantId;
+            const requesterName = participant?.displayName || data.payload?.displayName || 'Participant';
+
+            console.log(`[WS] Draw permission requested by ${requesterName} (${requesterId}) in room ${meta.roomId}`);
+
+            // Forward request to all hosts in the room
+            sendToHosts(meta.roomId, {
+              type: 'board:draw_permission_requested',
+              payload: {
+                participantId: requesterId,
+                displayName: requesterName,
+                timestamp: new Date().toISOString(),
+              },
+            });
+            break;
+          }
+
+          case 'board:draw_permission_granted': {
+            const meta = socketMetadata.get(ws);
+            if (!meta) return;
+
+            const targetId = data.payload?.participantId;
+            if (!targetId) return;
+
+            const roomSockets = roomConnections.get(meta.roomId);
+            if (!roomSockets) return;
+
+            let targetName = 'Participant';
+            for (const p of roomSockets.values()) {
+              if (p.participantId === targetId) {
+                p.canDraw = true;
+                targetName = p.displayName;
+                break;
+              }
+            }
+
+            console.log(`[WS] Draw permission granted to ${targetName} (${targetId}) in room ${meta.roomId}`);
+
+            // Broadcast permission granted to the room
+            broadcastToRoom(meta.roomId, {
+              type: 'board:draw_permission_granted',
+              payload: {
+                participantId: targetId,
+                displayName: targetName,
+              },
+            });
+            break;
+          }
+
+          case 'board:draw_permission_denied': {
+            const meta = socketMetadata.get(ws);
+            if (!meta) return;
+
+            const targetId = data.payload?.participantId;
+            if (!targetId) return;
+
+            console.log(`[WS] Draw permission denied for ${targetId} in room ${meta.roomId}`);
+
+            // Send notification to target participant
+            sendToParticipant(meta.roomId, targetId, {
+              type: 'board:draw_permission_denied',
+              payload: {
+                participantId: targetId,
+              },
+            });
+            break;
+          }
+
+          case 'board:draw_permission_revoked': {
+            const meta = socketMetadata.get(ws);
+            if (!meta) return;
+
+            const targetId = data.payload?.participantId;
+            if (!targetId) return;
+
+            const roomSockets = roomConnections.get(meta.roomId);
+            if (!roomSockets) return;
+
+            let targetName = 'Participant';
+            for (const p of roomSockets.values()) {
+              if (p.participantId === targetId) {
+                p.canDraw = false;
+                targetName = p.displayName;
+                break;
+              }
+            }
+
+            console.log(`[WS] Draw permission revoked for ${targetName} (${targetId}) in room ${meta.roomId}`);
+
+            // Broadcast permission revoked to the room
+            broadcastToRoom(meta.roomId, {
+              type: 'board:draw_permission_revoked',
+              payload: {
+                participantId: targetId,
+                displayName: targetName,
+              },
+            });
             break;
           }
 

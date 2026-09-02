@@ -12,6 +12,9 @@ import {
   Mic,
   MicOff,
   Users,
+  Hand,
+  CheckCircle,
+  XCircle,
 } from 'lucide-react';
 
 interface RoomViewProps {
@@ -27,15 +30,24 @@ export const RoomView: React.FC<RoomViewProps> = ({ room, session, onLeave }) =>
 
   const participantName = session.user?.displayName || session.guest?.name || 'Participant';
 
-  // 1. Realtime Room Presence (WebSocket sync)
+  // 1. Realtime Room Presence (WebSocket sync & draw permissions)
   const {
     participants,
     isConnected: isWsConnected,
     myParticipantId,
+    myColor,
     isMuted: isWsMuted,
     toggleMute: toggleWsMute,
     toggleSpeaking: toggleWsSpeaking,
     isSpeaking: isWsSpeaking,
+    canDraw,
+    pendingDrawRequests,
+    drawRequestSent,
+    drawRequestFeedback,
+    requestDrawPermission,
+    grantDrawPermission,
+    denyDrawPermission,
+    revokeDrawPermission,
   } = useRoomPresence({
     roomId: room.id,
     participantId: session.participantId,
@@ -131,7 +143,9 @@ export const RoomView: React.FC<RoomViewProps> = ({ room, session, onLeave }) =>
         <div className="flex items-center gap-2.5">
           <div className="hidden sm:flex items-center gap-1 text-xs text-neutral-500 bg-neutral-50 px-2 py-1 rounded-md border hairline-border">
             <Users className="w-3.5 h-3.5 text-neutral-400" />
-            <span>{participants.length} {participants.length === 1 ? 'person' : 'people'}</span>
+            <span>
+              {participants.length} {participants.length === 1 ? 'person' : 'people'}
+            </span>
           </div>
 
           <button
@@ -144,6 +158,47 @@ export const RoomView: React.FC<RoomViewProps> = ({ room, session, onLeave }) =>
         </div>
       </header>
 
+      {/* Host Toast for Incoming Draw Requests */}
+      {session.isHost && pendingDrawRequests.length > 0 && (
+        <div className="fixed top-14 right-4 z-50 flex flex-col gap-2 max-w-sm w-full animate-in fade-in slide-in-from-top-3 duration-200">
+          {pendingDrawRequests.map((req) => (
+            <div
+              key={req.participantId}
+              className="bg-white/95 backdrop-blur-md border hairline-border border-indigo-100 rounded-2xl p-3 shadow-lg flex items-center justify-between gap-3"
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                  <Hand className="w-4 h-4" />
+                </div>
+                <div className="truncate">
+                  <div className="text-xs font-semibold text-neutral-900 truncate">
+                    {req.displayName}
+                  </div>
+                  <div className="text-[11px] text-neutral-500">requested to draw</div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  onClick={() => grantDrawPermission(req.participantId)}
+                  className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-medium transition-colors flex items-center gap-1 cursor-pointer"
+                >
+                  <CheckCircle className="w-3.5 h-3.5" />
+                  <span>approve</span>
+                </button>
+                <button
+                  onClick={() => denyDrawPermission(req.participantId)}
+                  className="px-2.5 py-1 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 rounded-lg text-xs font-medium transition-colors flex items-center gap-1 cursor-pointer"
+                >
+                  <XCircle className="w-3.5 h-3.5" />
+                  <span>deny</span>
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Main Studio Area */}
       <div className="flex-1 flex overflow-hidden relative">
         {/* Left Rail: 3-state Participant Rail (hidden on mobile screen, accessible via bottom bar) */}
@@ -151,6 +206,7 @@ export const RoomView: React.FC<RoomViewProps> = ({ room, session, onLeave }) =>
           <ParticipantRail
             participants={participants}
             currentParticipantId={myParticipantId}
+            isHost={session.isHost}
             isMuted={currentMuted}
             isSpeaking={currentSpeaking}
             voiceStatus={voiceStatus}
@@ -159,6 +215,8 @@ export const RoomView: React.FC<RoomViewProps> = ({ room, session, onLeave }) =>
             onToggleMute={handleToggleMute}
             onLeaveRoom={onLeave}
             onToggleSimulateSpeak={toggleWsSpeaking}
+            onGrantDrawPermission={grantDrawPermission}
+            onRevokeDrawPermission={revokeDrawPermission}
           />
         </div>
 
@@ -178,10 +236,16 @@ export const RoomView: React.FC<RoomViewProps> = ({ room, session, onLeave }) =>
           <WhiteboardCanvas
             roomId={room.id}
             user={{
-              id: session.user?.id,
+              id: session.user?.id || myParticipantId,
               displayName: participantName,
-              color: session.isHost ? '#d97706' : '#4f46e5',
+              color: myColor,
+              isHost: session.isHost,
             }}
+            token={localStorage.getItem('auth_token')}
+            canDraw={canDraw}
+            onRequestDraw={requestDrawPermission}
+            drawRequestSent={drawRequestSent}
+            drawRequestFeedback={drawRequestFeedback}
           />
         </main>
       </div>
@@ -194,7 +258,11 @@ export const RoomView: React.FC<RoomViewProps> = ({ room, session, onLeave }) =>
             currentMuted ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-neutral-100 text-neutral-800'
           }`}
         >
-          {currentMuted ? <MicOff className="w-4 h-4 text-rose-600" /> : <Mic className="w-4 h-4 text-neutral-700" />}
+          {currentMuted ? (
+            <MicOff className="w-4 h-4 text-rose-600" />
+          ) : (
+            <Mic className="w-4 h-4 text-neutral-700" />
+          )}
           <span>{currentMuted ? 'unmute' : 'mute mic'}</span>
         </button>
 
@@ -220,7 +288,9 @@ export const RoomView: React.FC<RoomViewProps> = ({ room, session, onLeave }) =>
         <div className="md:hidden fixed inset-0 z-50 bg-black/30 backdrop-blur-xs flex flex-col justify-end">
           <div className="bg-white rounded-t-2xl p-4 max-h-[70vh] flex flex-col shadow-lg border-t hairline-border">
             <div className="flex items-center justify-between pb-3 border-b hairline-border">
-              <h3 className="text-xs font-semibold text-neutral-900">participants ({participants.length})</h3>
+              <h3 className="text-xs font-semibold text-neutral-900">
+                participants ({participants.length})
+              </h3>
               <button
                 onClick={() => setMobileSheetOpen(false)}
                 className="text-xs text-neutral-500 hover:text-neutral-800 px-2 py-1 cursor-pointer"
@@ -238,7 +308,10 @@ export const RoomView: React.FC<RoomViewProps> = ({ room, session, onLeave }) =>
                     className="flex items-center justify-between p-2 rounded-xl bg-neutral-50 border hairline-border"
                   >
                     <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-full bg-indigo-500 text-white flex items-center justify-center text-xs font-semibold">
+                      <div
+                        style={{ backgroundColor: p.color || '#4f46e5' }}
+                        className="w-7 h-7 rounded-full text-white flex items-center justify-center text-xs font-semibold"
+                      >
                         {p.displayName.slice(0, 1).toUpperCase()}
                       </div>
                       <div className="text-xs font-medium text-neutral-900">
