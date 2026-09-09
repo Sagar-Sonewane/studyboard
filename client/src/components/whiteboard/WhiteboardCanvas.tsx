@@ -58,6 +58,13 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
   const [isFollowingHost, setIsFollowingHost] = useState(!isHost);
   const [selectedAuthor, setSelectedAuthor] = useState<{ name: string; color: string } | null>(null);
 
+  // References to prevent unnecessary React re-renders during active continuous drag
+  const lastToolIdRef = useRef<string>('select');
+  const lastCanUndoRef = useRef<boolean>(false);
+  const lastCanRedoRef = useRef<boolean>(false);
+  const lastZoomLevelRef = useRef<number>(100);
+  const lastSelectedShapeIdRef = useRef<string | null>(null);
+
   // Yjs synchronization hook
   const { editor, onEditorMount, syncState } = useYjsWhiteboardSync({
     roomId,
@@ -95,12 +102,16 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
     if (dx > 1 || dy > 1 || dz > 0.01) {
       isUpdatingCameraProgrammatically.current = true;
       try {
-        editor.setCamera({ x: hostCam.x, y: hostCam.y, z: hostCam.z }, { animation: { duration: 120 } });
-        setZoomLevel(Math.round(hostCam.z * 100));
+        editor.setCamera({ x: hostCam.x, y: hostCam.y, z: hostCam.z }, { animation: { duration: 100 } });
+        const newZoom = Math.round(hostCam.z * 100);
+        if (newZoom !== lastZoomLevelRef.current) {
+          lastZoomLevelRef.current = newZoom;
+          setZoomLevel(newZoom);
+        }
       } finally {
         setTimeout(() => {
           isUpdatingCameraProgrammatically.current = false;
-        }, 150);
+        }, 120);
       }
     }
   }, [editor, isHost, isFollowingHost, syncState.hostCamera, isForked]);
@@ -113,30 +124,55 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
       if (canDraw) {
         editorInstance.setCurrentTool('draw');
         setActiveTool('draw');
+        lastToolIdRef.current = 'draw';
       } else {
         editorInstance.updateInstanceState({ isReadonly: true });
         editorInstance.setCurrentTool('select');
         setActiveTool('select');
+        lastToolIdRef.current = 'select';
       }
 
-      // Subscribe to tool changes, history changes, and shape selection attribution
+      // Selective listener: only triggers React state updates on actual state changes
       const cleanup = editorInstance.store.listen(() => {
         try {
           const currentToolId = editorInstance.getCurrentToolId();
-          setActiveTool(currentToolId);
-          setCanUndo(editorInstance.getCanUndo());
-          setCanRedo(editorInstance.getCanRedo());
-          setZoomLevel(Math.round(editorInstance.getZoomLevel() * 100));
+          if (currentToolId !== lastToolIdRef.current) {
+            lastToolIdRef.current = currentToolId;
+            setActiveTool(currentToolId);
+          }
 
-          // Check selected shape author attribution
+          const currentCanUndo = editorInstance.getCanUndo();
+          if (currentCanUndo !== lastCanUndoRef.current) {
+            lastCanUndoRef.current = currentCanUndo;
+            setCanUndo(currentCanUndo);
+          }
+
+          const currentCanRedo = editorInstance.getCanRedo();
+          if (currentCanRedo !== lastCanRedoRef.current) {
+            lastCanRedoRef.current = currentCanRedo;
+            setCanRedo(currentCanRedo);
+          }
+
+          const currentZoom = Math.round(editorInstance.getZoomLevel() * 100);
+          if (currentZoom !== lastZoomLevelRef.current) {
+            lastZoomLevelRef.current = currentZoom;
+            setZoomLevel(currentZoom);
+          }
+
+          // Check selected shape author attribution only when selected IDs change
           const selected = editorInstance.getSelectedShapes();
-          if (selected.length === 1 && (selected[0] as any)?.meta?.authorName) {
-            setSelectedAuthor({
-              name: (selected[0] as any).meta.authorName,
-              color: (selected[0] as any).meta.authorColor || '#4f46e5',
-            });
-          } else {
-            setSelectedAuthor(null);
+          const primarySelectedId = selected.length === 1 ? selected[0].id : null;
+
+          if (primarySelectedId !== lastSelectedShapeIdRef.current) {
+            lastSelectedShapeIdRef.current = primarySelectedId;
+            if (selected.length === 1 && (selected[0] as any)?.meta?.authorName) {
+              setSelectedAuthor({
+                name: (selected[0] as any).meta.authorName,
+                color: (selected[0] as any).meta.authorColor || '#4f46e5',
+              });
+            } else {
+              setSelectedAuthor(null);
+            }
           }
         } catch {
           // ignore
@@ -167,6 +203,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
         } else {
           editor.setCurrentTool(tool as any);
         }
+        lastToolIdRef.current = tool;
         setActiveTool(tool);
       } catch (err) {
         console.error('[Whiteboard] Failed to set tool:', err);
@@ -203,7 +240,9 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
     if (editor) {
       setIsFollowingHost(false);
       editor.zoomIn();
-      setZoomLevel(Math.round(editor.getZoomLevel() * 100));
+      const newZoom = Math.round(editor.getZoomLevel() * 100);
+      lastZoomLevelRef.current = newZoom;
+      setZoomLevel(newZoom);
     }
   };
 
@@ -211,7 +250,9 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
     if (editor) {
       setIsFollowingHost(false);
       editor.zoomOut();
-      setZoomLevel(Math.round(editor.getZoomLevel() * 100));
+      const newZoom = Math.round(editor.getZoomLevel() * 100);
+      lastZoomLevelRef.current = newZoom;
+      setZoomLevel(newZoom);
     }
   };
 
@@ -219,6 +260,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
     if (editor) {
       setIsFollowingHost(false);
       editor.resetZoom();
+      lastZoomLevelRef.current = 100;
       setZoomLevel(100);
     }
   };
@@ -227,14 +269,18 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
     if (editor) {
       setIsFollowingHost(false);
       editor.zoomToFit();
-      setZoomLevel(Math.round(editor.getZoomLevel() * 100));
+      const newZoom = Math.round(editor.getZoomLevel() * 100);
+      lastZoomLevelRef.current = newZoom;
+      setZoomLevel(newZoom);
     }
   };
 
   const handleJumpToHost = () => {
     if (syncState.hostCamera && editor) {
-      editor.setCamera(syncState.hostCamera, { animation: { duration: 200 } });
-      setZoomLevel(Math.round(syncState.hostCamera.z * 100));
+      editor.setCamera(syncState.hostCamera, { animation: { duration: 150 } });
+      const newZoom = Math.round(syncState.hostCamera.z * 100);
+      lastZoomLevelRef.current = newZoom;
+      setZoomLevel(newZoom);
       setIsFollowingHost(true);
     }
   };

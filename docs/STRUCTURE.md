@@ -141,6 +141,34 @@ STRIPE_MONTHLY_PRICE_ID=
   state, not just hidden in the UI — a client bypass (devtools) shouldn't be
   able to draw during a locked/paused room.
 
+## Realtime sync performance guidelines
+
+Added after a real regression: Phase 5.1 introduced visible lag when
+dragging to draw/resize shapes. Apply these from the start for any future
+continuous-drag sync (Phase 6's annotation layer draws the same way):
+
+- **Throttle or batch document sync during an active drag** (~30-60ms
+  intervals) rather than syncing on every pointer-move — an unthrottled
+  drag can fire dozens of network messages per second for a single shape.
+  Alternatively, apply intermediate frames locally-only and finalize the
+  synced state on pointer-up.
+- **Use the diff tldraw's `store.listen` already gives you** — don't
+  re-serialize or re-diff the whole store on every change.
+- **Batch related updates into a single `Y.Doc.transact()` call** instead
+  of one transaction per point/frame — each transaction fires its own
+  'update' event over the wire.
+- **Keep presence/awareness broadcasts (cursor position, follow-host
+  camera) on a separate, lighter-weight, capped channel** (~20-30
+  updates/sec) from full document sync — don't let cursor-tracking
+  granularity dictate document-sync granularity.
+- **Any per-shape metadata work (author tags, permission checks) belongs
+  at creation/action time, not recomputed on every intermediate drag
+  frame.**
+- When adding a new continuous-input feature (freehand pen, annotation
+  strokes, drag-resize), profile it with two simultaneous clients before
+  calling it done — a feature that's smooth locally can still flood the
+  sync channel once it's actually going over the wire.
+
 ## Testing discipline
 
 - Every realtime feature (presence, voice, whiteboard sync, grace period,

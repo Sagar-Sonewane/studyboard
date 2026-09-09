@@ -91,6 +91,16 @@ export const RoomView: React.FC<RoomViewProps> = ({ room, session, onLeave }) =>
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const whiteboardUser = React.useMemo(
+    () => ({
+      id: session.user?.id || myParticipantId,
+      displayName: participantName,
+      color: myColor,
+      isHost: session.isHost,
+    }),
+    [session.user?.id, myParticipantId, participantName, myColor, session.isHost]
+  );
+
   return (
     <div className="h-screen w-screen flex flex-col bg-[#fdfdfd] text-neutral-900 overflow-hidden select-none">
       {/* Top Bar per DESIGN.md */}
@@ -235,12 +245,7 @@ export const RoomView: React.FC<RoomViewProps> = ({ room, session, onLeave }) =>
         <main className="flex-1 relative flex overflow-hidden pb-14 md:pb-0">
           <WhiteboardCanvas
             roomId={room.id}
-            user={{
-              id: session.user?.id || myParticipantId,
-              displayName: participantName,
-              color: myColor,
-              isHost: session.isHost,
-            }}
+            user={whiteboardUser}
             token={localStorage.getItem('auth_token')}
             canDraw={canDraw}
             onRequestDraw={requestDrawPermission}

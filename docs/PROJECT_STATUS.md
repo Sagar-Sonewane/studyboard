@@ -24,13 +24,13 @@ actually clicked through it. When in doubt, mark something as
 
 ## Current phase
 
-`Phase 5.1 completed (Whiteboard Collaboration Controls & Shape Tool Fixes) — ready for Phase 6 (File Uploads & Whiteboard Attachment)`
+`Phase 5.2 completed (Shape-drawing performance lag fixed with evidence & lifecycle isolation) — ready for Phase 6 (File Uploads & Whiteboard Attachment)`
 
 ## Environment status
 
 - [x] Supabase project created & configured
 - [x] `.env` populated (`SUPABASE_URL`, `SUPABASE_ANON_KEY`, `DATABASE_URL`)
-- [ ] LiveKit Cloud account/keys set up (runs with built-in graceful fallback simulation when keys are unset)
+- [x] LiveKit Cloud account & keys configured (`LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`) — real WebRTC voice active
 - [ ] Stripe account/keys set up (not needed until Phase 7)
 
 ## Phases completed
@@ -54,25 +54,26 @@ actually clicked through it. When in doubt, mark something as
   - Added board management and forking API endpoints (`GET /api/rooms/:id/boards`, `POST /api/rooms/:id/boards/fork`) in [server/src/routes/rooms.ts](file:///d:/sagar/studyboard/server/src/routes/rooms.ts).
   - Built React Yjs sync hook [client/src/lib/yjs-sync.ts](file:///d:/sagar/studyboard/client/src/lib/yjs-sync.ts) synchronizing `tldraw` store records (`shape`, `binding`, `asset`, `page`) with `Y.Doc` (`Y.Map`).
   - Implemented the "fork my own copy" feature in [client/src/components/whiteboard/WhiteboardCanvas.tsx](file:///d:/sagar/studyboard/client/src/components/whiteboard/WhiteboardCanvas.tsx) with a private workspace mode, top banner indicator, and one-click toggle between shared and personal boards.
-- **Phase 5.1 — Whiteboard Collaboration Controls & Shape Tool Fixes**:
-  - **Draw permission gating**: Non-host participants join locked (`editor.updateInstanceState({ isReadonly: true })`), showing a "request to draw" button on the right rail. Requests route via WebSocket (`board:draw_permission_requested`) to host as a non-blocking toast with Approve / Deny. Host can also grant or revoke permission anytime via pencil/lock icon toggles in the participant rail. Session-scoped in memory.
-  - **Follow-host viewport**: Non-hosts follow host camera position on join smoothly via Yjs awareness. Pan/zoom by a participant immediately breaks away; top indicator provides "stop following" and "jump to host" one-click return.
-  - **Per-user attribution**: Non-colliding user color assignment from a 10-color palette on join. Shapes and strokes stamped with `meta: { authorId, authorName, authorColor }`. Hovering or selecting any shape displays a floating author badge (`Created by [Name]`).
-  - **Shapes Flyout & Dash Styles**: Fixed Shapes flyout to correctly switch between Rectangle, Ellipse, Triangle, Diamond, Arrow, and Line (`GeoShapeGeoStyle`, `setCurrentTool('arrow')`, `setCurrentTool('line')`). Added `DefaultDashStyle` options (`solid`, `dashed`, `dotted`, `draw`) to the Palette flyout.
+- **Phase 5.1 — Whiteboard collaboration controls**:
+  - Draw permission gating (locked by default for non-hosts, host toast approval & rail management).
+  - Follow-host viewport sync with break-away and "jump to host" one-click return.
+  - Per-user color attribution (10-color non-colliding palette) and author metadata tooltip on shapes.
+  - Fixed Shapes flyout (rectangle, ellipse, triangle, diamond, arrow, line) and added dash styles (solid, dashed, dotted, draw) to Palette flyout.
+- **Phase 5.2 — Shape-drawing performance lag fix (evidence-based root causes resolved)**:
+  - **Root Cause 1 (Lifecycle Re-instantiation)**: `user` object in `RoomView.tsx` was unmemoized, causing `useYjsWhiteboardSync`'s effect to re-run on every room render and tearing down/recreating the `Y.Doc` and `WebsocketProvider` connection during active drags. Fixed by memoizing `whiteboardUser` and isolating awareness updates into a separate effect without tearing down `Y.Doc`.
+  - **Root Cause 2 (Local Echo Guard)**: Guaranteed that local changes write to Yjs tagged with `'tldraw-local'` origin and are skipped in `handleYjsObserver`, preventing echo feedback.
+  - **Root Cause 3 (Batching & Selective Listeners)**: Buffered continuous pointer updates into a 40ms throttled transaction queue (`~25fps` network rate) with instant flush on pointerup/blur, capped camera awareness broadcasts to 50ms (`~20fps`), and guarded React `setState` calls in `WhiteboardCanvas.tsx` to prevent component re-renders during active continuous dragging.
 
 ## Currently in progress
 
-*(none — Phase 5.1 is completed, verified, and building cleanly with zero errors)*
+*(none — Phase 5.2 is completed, verified, and building cleanly with zero errors)*
 
 ## Files touched this session
 
-- `server/src/ws/server.ts` — Added color palette assignment, draw permission request/grant/deny/revoke WebSocket handlers and broadcasts
-- `client/src/hooks/use-room-presence.ts` — Handled draw permission states, host request queues, and permission dispatchers
-- `client/src/components/participants/ParticipantRail.tsx` — Added draw permission status badges, color circles, and host grant/revoke buttons per row
-- `client/src/components/whiteboard/WhiteboardToolbar.tsx` — Fixed shapes flyout for all 6 shapes, added stroke dash style selector (solid/dashed/dotted/draw), and locked drawing state UI
-- `client/src/components/whiteboard/WhiteboardCanvas.tsx` — Enforced tldraw readonly mode on locked permission, follow-host camera sync, and shape author attribution tooltip
-- `client/src/components/room/RoomView.tsx` — Added Host Toast for incoming draw requests with Approve/Deny actions and connected permission controls
-- `client/src/lib/yjs-sync.ts` — Added camera awareness broadcasting and automatic shape author metadata tagging
+- `client/src/lib/yjs-sync.ts` — Stabilized Y.Doc and WebSocketProvider lifecycles, added `userRef`, implemented 40ms transaction batch queue, strict local origin echo guard, and 50ms camera awareness throttle.
+- `client/src/components/room/RoomView.tsx` — Memoized `whiteboardUser` object to prevent redundant re-instantiations of child hooks.
+- `client/src/components/whiteboard/WhiteboardCanvas.tsx` — Guarded `store.listen` so React state updates (`setActiveTool`, `setCanUndo`, `setCanRedo`, `setZoomLevel`, `selectedAuthor`) only fire when values actually change.
+- `docs/PROJECT_STATUS.md` — Updated with exact root causes and resolution details for Phase 5.2.
 
 ## Known issues / things to revisit
 

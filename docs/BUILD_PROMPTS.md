@@ -231,6 +231,86 @@ yourself; a successful build is not evidence a button works.
 
 ---
 
+## Phase 5.2 — Fix shape-drawing performance lag (attempt 2 — evidence-first)
+
+```
+Read first: /docs/PROJECT_STATUS.md in full, including the note that a
+first attempt at this fix (throttling/batching guesses) was already tried
+and did NOT resolve the lag. Do not reapply the same class of fix without
+first gathering evidence that it addresses the actual bottleneck — guessing
+again wastes another cycle.
+
+The lag is still present after the first fix attempt. This time, diagnose
+before touching any code:
+
+## Step 1 — Instrument and measure
+Add temporary counters/logging (remove before finishing) around:
+- how many times the tldraw store.listen callback fires during one 3-second
+  shape drag
+- how many times Y.Doc.transact() (or equivalent) is called during that
+  same drag
+- how many WebSocket messages are actually sent during that same drag
+- how many times the Yjs document's 'update' observer fires and re-applies
+  changes back onto the tldraw store during that same drag (this last one
+  is the important one — see Step 2)
+
+Report these four numbers before making any further changes. If any of
+them is far higher than "once or twice per meaningful change," that's your
+lead.
+
+## Step 2 — Check specifically for a missing echo guard
+This is the most common root cause of exactly this symptom in a
+Yjs-tldraw binding, and may be why the first throttling attempt didn't
+help (throttling reduces frequency but doesn't stop a feedback loop):
+
+When a LOCAL tldraw change is written into the Yjs doc, is that write
+tagged with a local origin (e.g. `ydoc.transact(() => {...}, localOrigin)`)?
+And when the Yjs 'update' observer fires to apply changes onto the tldraw
+store, does it check the transaction's origin and SKIP re-applying it if
+the origin matches the local one (since that change is already reflected
+in the tldraw store — it originated there)?
+
+If this origin-check guard is missing or broken, every local edit gets
+echoed back through Yjs and re-applied to the tldraw store as if it were a
+remote change. This can trigger store.listen again, which re-syncs to
+Yjs again, compounding with every pointer-move during a drag — this would
+explain lag that throttling alone doesn't fix, since the loop happens
+per-change regardless of how infrequently changes are sent.
+
+Fix this specifically if found: tag local-origin transactions and filter
+them out in the observer, applying only genuinely remote changes back to
+the tldraw store.
+
+## Step 3 — Verify the first fix attempt is actually in place and working
+Confirm the throttling/batching changes from the first attempt weren't
+accidentally reverted, gated behind something inactive, or applied to the
+wrong layer (e.g. throttled the outbound network send but not an
+expensive CPU-bound local computation, which would still lag with zero
+network messages).
+
+## Step 4 — Profile
+Capture a browser Performance tab recording (or React DevTools Profiler)
+during a shape drag. Identify the top 2-3 functions by self-time or the
+longest tasks on the timeline. Note what they are before fixing further —
+don't fix based on assumption once you have profiler data available.
+
+## Step 5 — Isolate local-only vs sync-caused
+Test dragging a shape with the Yjs sync temporarily disabled (or with only
+one client connected, no remote peer). If the lag disappears, the cause is
+in the sync layer. If it persists even fully local/solo, the cause is
+elsewhere (tldraw config, an unrelated expensive re-render, something in
+Phase 5.1's attribution/permission code running in the render path).
+
+## Fix and verify
+Fix based on what Steps 1-5 actually showed — not based on the same
+guesses as last time. Verify smoothness with two simultaneous browser
+tabs, for both the person drawing and the person watching. Update
+/docs/PROJECT_STATUS.md with the ACTUAL root cause found (not just "fixed
+performance") so this doesn't need re-diagnosing again if it resurfaces.
+```
+
+---
+
 ## Phase 6 — File upload and annotation
 
 ```

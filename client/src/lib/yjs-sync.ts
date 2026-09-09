@@ -58,6 +58,11 @@ export function useYjsWhiteboardSync({
   const docRef = useRef<Y.Doc | null>(null);
   const providerRef = useRef<WebsocketProvider | null>(null);
   const isApplyingRemote = useRef(false);
+  const userRef = useRef(user);
+
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
 
   // Compute WebSocket URL
   const resolvedWsUrl =
@@ -72,30 +77,27 @@ export function useYjsWhiteboardSync({
     ? `studysync-forked-${forkedBoardId || roomId}-${user?.id || 'local'}`
     : `studysync-room-${roomId}`;
 
-  // Initialize Y.Doc & WebsocketProvider
+  // 1. Initialize Y.Doc & WebsocketProvider (stable lifecycle per roomId/board)
   useEffect(() => {
     if (!roomId) return;
 
-    // Create unique Y.Doc for this room or forked board
     const doc = new Y.Doc();
     docRef.current = doc;
 
     let provider: WebsocketProvider | null = null;
 
-    // If it's a shared board, connect to WebSocket provider for live sync
     if (!isForked) {
       provider = new WebsocketProvider(resolvedWsUrl, docName, doc, {
         connect: true,
       });
       providerRef.current = provider;
 
-      // Set user awareness info
-      if (user) {
+      if (userRef.current) {
         provider.awareness.setLocalStateField('user', {
-          id: user.id,
-          name: user.displayName,
-          color: user.color || '#4f46e5',
-          isHost: Boolean(user.isHost),
+          id: userRef.current.id,
+          name: userRef.current.displayName,
+          color: userRef.current.color || '#4f46e5',
+          isHost: Boolean(userRef.current.isHost),
         });
       }
 
@@ -132,7 +134,6 @@ export function useYjsWhiteboardSync({
         }));
       });
     } else {
-      // Local private forked board (no remote sync)
       setSyncState({
         isConnected: false,
         isSynced: true,
@@ -157,9 +158,21 @@ export function useYjsWhiteboardSync({
       doc.destroy();
       docRef.current = null;
     };
-  }, [roomId, isForked, docName, resolvedWsUrl, user?.displayName, user?.color, user?.isHost]);
+  }, [roomId, isForked, docName, resolvedWsUrl]);
 
-  // Bind tldraw store <-> Yjs Y.Map
+  // 2. Separate lightweight effect to update user info in awareness without tearing down Y.Doc
+  useEffect(() => {
+    if (providerRef.current && user) {
+      providerRef.current.awareness.setLocalStateField('user', {
+        id: user.id,
+        name: user.displayName,
+        color: user.color || '#4f46e5',
+        isHost: Boolean(user.isHost),
+      });
+    }
+  }, [user?.id, user?.displayName, user?.color, user?.isHost]);
+
+  // 3. Bind tldraw store <-> Yjs Y.Map with batched updates and origin echo guard
   useEffect(() => {
     if (!editor || !docRef.current) return;
 
@@ -167,7 +180,7 @@ export function useYjsWhiteboardSync({
     const yRecords = doc.getMap<any>('tldraw_records');
     const store = editor.store;
 
-    // 1. Load initial remote records into tldraw store if Yjs doc already has data
+    // Load initial remote records into tldraw store
     const initialRecords: TLRecord[] = [];
     yRecords.forEach((recordData) => {
       if (recordData && isDocumentRecord(recordData)) {
@@ -185,7 +198,6 @@ export function useYjsWhiteboardSync({
         isApplyingRemote.current = false;
       }
     } else if (isForked) {
-      // For forked boards, populate Yjs map from current editor state
       const currentRecords = store.allRecords();
       doc.transact(() => {
         for (const record of currentRecords) {
@@ -196,47 +208,108 @@ export function useYjsWhiteboardSync({
       }, 'tldraw-local-fork');
     }
 
-    // 2. Listen to local tldraw changes, tag with author metadata, and push to Yjs
+    // Pending change buffers for batching/throttling sync to Yjs
+    const pendingPuts = new Map<string, TLRecord>();
+    const pendingDeletes = new Set<string>();
+    let flushTimeout: number | null = null;
+    let lastFlushTime = 0;
+    const THROTTLE_INTERVAL_MS = 40; // ~25 updates/sec network sync rate
+
+    const flushPendingChanges = () => {
+      if (flushTimeout !== null) {
+        clearTimeout(flushTimeout);
+        flushTimeout = null;
+      }
+
+      if (pendingPuts.size === 0 && pendingDeletes.size === 0) return;
+
+      const putsToApply = Array.from(pendingPuts.values());
+      const deletesToApply = Array.from(pendingDeletes.values());
+      pendingPuts.clear();
+      pendingDeletes.clear();
+      lastFlushTime = performance.now();
+
+      doc.transact(() => {
+        for (const record of putsToApply) {
+          yRecords.set(record.id, record);
+        }
+        for (const id of deletesToApply) {
+          yRecords.delete(id);
+        }
+      }, 'tldraw-local');
+    };
+
+    const scheduleFlush = () => {
+      const now = performance.now();
+      const elapsed = now - lastFlushTime;
+
+      if (elapsed >= THROTTLE_INTERVAL_MS) {
+        flushPendingChanges();
+      } else if (flushTimeout === null) {
+        flushTimeout = window.setTimeout(flushPendingChanges, THROTTLE_INTERVAL_MS - elapsed);
+      }
+    };
+
+    // Listen to local tldraw changes, tag author metadata on create, and queue batched sync
     const unlistenStore = store.listen(
       (entry) => {
         if (isApplyingRemote.current) return;
 
-        doc.transact(() => {
-          // Added records: tag author metadata
-          for (const record of Object.values(entry.changes.added)) {
-            if (isDocumentRecord(record)) {
-              if (record.typeName === 'shape' && !(record as any).meta?.authorName) {
-                (record as any).meta = {
-                  ...(record as any).meta,
-                  authorId: user?.id,
-                  authorName: user?.displayName || 'Participant',
-                  authorColor: user?.color || '#4f46e5',
-                };
-              }
-              yRecords.set(record.id, record);
-            }
-          }
+        let hasChanges = false;
+        const currentUser = userRef.current;
 
-          // Updated records
-          for (const [, to] of Object.values(entry.changes.updated)) {
-            if (isDocumentRecord(to)) {
-              yRecords.set(to.id, to);
+        // Added records: tag author metadata once at creation
+        for (const record of Object.values(entry.changes.added)) {
+          if (isDocumentRecord(record)) {
+            if (record.typeName === 'shape' && !(record as any).meta?.authorName) {
+              (record as any).meta = {
+                ...(record as any).meta,
+                authorId: currentUser?.id,
+                authorName: currentUser?.displayName || 'Participant',
+                authorColor: currentUser?.color || '#4f46e5',
+              };
             }
+            pendingPuts.set(record.id, record);
+            pendingDeletes.delete(record.id);
+            hasChanges = true;
           }
+        }
 
-          // Removed records
-          for (const record of Object.values(entry.changes.removed)) {
-            if (isDocumentRecord(record)) {
-              yRecords.delete(record.id);
-            }
+        // Updated records: buffer for throttled batching
+        for (const [, to] of Object.values(entry.changes.updated)) {
+          if (isDocumentRecord(to)) {
+            pendingPuts.set(to.id, to);
+            pendingDeletes.delete(to.id);
+            hasChanges = true;
           }
-        }, 'tldraw-local');
+        }
+
+        // Removed records: buffer for deletion
+        for (const record of Object.values(entry.changes.removed)) {
+          if (isDocumentRecord(record)) {
+            pendingPuts.delete(record.id);
+            pendingDeletes.add(record.id);
+            hasChanges = true;
+          }
+        }
+
+        if (hasChanges) {
+          scheduleFlush();
+        }
       },
       { source: 'user', scope: 'document' }
     );
 
-    // 3. Observe Yjs remote updates and merge into tldraw store
+    // Flush immediately when user releases pointer or focuses away
+    const handlePointerUp = () => {
+      flushPendingChanges();
+    };
+    window.addEventListener('pointerup', handlePointerUp);
+    window.addEventListener('blur', handlePointerUp);
+
+    // Observe Yjs remote updates and merge into tldraw store with strict origin echo guard
     const handleYjsObserver = (event: Y.YMapEvent<any>) => {
+      // Skip local transactions (already applied in local store)
       if (event.transaction.origin === 'tldraw-local' || event.transaction.origin === 'tldraw-local-fork') {
         return;
       }
@@ -276,10 +349,19 @@ export function useYjsWhiteboardSync({
 
     yRecords.observe(handleYjsObserver);
 
-    // 4. If local user is host, broadcast camera position changes to Yjs awareness
+    // Throttled camera awareness broadcast for host viewport sync (~20fps cap)
     let unlistenCamera: (() => void) | undefined;
     if (providerRef.current && user?.isHost) {
-      const updateCameraAwareness = () => {
+      let lastCameraBroadcast = 0;
+      let cameraBroadcastTimeout: number | null = null;
+      const CAMERA_THROTTLE_MS = 50;
+
+      const broadcastCamera = () => {
+        if (cameraBroadcastTimeout !== null) {
+          clearTimeout(cameraBroadcastTimeout);
+          cameraBroadcastTimeout = null;
+        }
+        lastCameraBroadcast = performance.now();
         try {
           const camera = editor.getCamera();
           providerRef.current?.awareness.setLocalStateField('camera', {
@@ -292,19 +374,32 @@ export function useYjsWhiteboardSync({
         }
       };
 
-      updateCameraAwareness();
-      unlistenCamera = editor.store.listen(updateCameraAwareness, {
+      const handleCameraChange = () => {
+        const now = performance.now();
+        const elapsed = now - lastCameraBroadcast;
+        if (elapsed >= CAMERA_THROTTLE_MS) {
+          broadcastCamera();
+        } else if (cameraBroadcastTimeout === null) {
+          cameraBroadcastTimeout = window.setTimeout(broadcastCamera, CAMERA_THROTTLE_MS - elapsed);
+        }
+      };
+
+      broadcastCamera();
+      unlistenCamera = editor.store.listen(handleCameraChange, {
         source: 'user',
         scope: 'session',
       });
     }
 
     return () => {
+      flushPendingChanges();
       unlistenStore();
       yRecords.unobserve(handleYjsObserver);
       if (unlistenCamera) unlistenCamera();
+      window.removeEventListener('pointerup', handlePointerUp);
+      window.removeEventListener('blur', handlePointerUp);
     };
-  }, [editor, docRef.current, isForked, user?.id, user?.displayName, user?.color, user?.isHost]);
+  }, [editor, docRef.current, isForked]);
 
   const onEditorMount = useCallback((editorInstance: Editor) => {
     setEditor(editorInstance);
