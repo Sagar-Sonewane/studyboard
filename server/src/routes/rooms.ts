@@ -1,10 +1,37 @@
 import { Router, Request, Response } from 'express';
 import crypto from 'crypto';
+import multer from 'multer';
 import { prisma } from '../services/prisma';
 import { requireAuth, optionalAuth } from '../middleware/auth';
 import { generateLiveKitToken } from '../services/livekit';
+import {
+  uploadToStorage,
+  getStoragePublicUrl,
+  getRoomMaxFileSize,
+  sanitizeFilename,
+} from '../services/storage';
 
 export const roomsRouter = Router();
+
+const multerUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 50 * 1024 * 1024,
+  },
+});
+
+interface InMemoryUploadedFile {
+  id: string;
+  boardId: string;
+  uploadedBy: string;
+  storagePath: string;
+  fileType: 'image' | 'pdf_page' | 'doc_converted';
+  originalFilename: string;
+  sizeBytes: number;
+  createdAt: string;
+  url: string;
+}
+const inMemoryUploadedFiles = new Map<string, InMemoryUploadedFile[]>();
 
 // In-memory room store fallback when DATABASE_URL is not yet configured
 interface InMemoryRoom {
@@ -507,4 +534,221 @@ roomsRouter.post('/:id/boards/fork', optionalAuth, async (req: Request, res: Res
     message: 'Board forked successfully (in-memory mode)',
   });
 });
+
+/**
+ * POST /api/rooms/:id/files — Multipart upload
+ * Server validates size against current entitlement before accepting (10MB free tier cap),
+ * then uploads to Supabase Storage using service role key and creates DB record.
+ */
+roomsRouter.post('/:id/files', optionalAuth, (req: Request, res: Response) => {
+  multerUpload.single('file')(req, res, async (err: any) => {
+    if (err) {
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(413).json({
+          error: 'PayloadTooLarge',
+          message: 'File size exceeds maximum allowed upload limit (10MB on free tier)',
+        });
+      }
+      return res.status(400).json({
+        error: 'UploadError',
+        message: err.message || 'File upload parsing failed',
+      });
+    }
+
+    const { id: roomId } = req.params;
+    const file = req.file;
+
+    if (!file) {
+      return res.status(400).json({
+        error: 'BadRequest',
+        message: 'No file provided in multipart body under field "file"',
+      });
+    }
+
+    // 1. Enforce file size against entitlement (10MB free tier cap server-side)
+    const { maxSizeBytes, isPremium } = await getRoomMaxFileSize(roomId);
+    if (file.size > maxSizeBytes) {
+      return res.status(413).json({
+        error: 'PayloadTooLarge',
+        message: `File size (${(file.size / (1024 * 1024)).toFixed(1)}MB) exceeds ${
+          isPremium ? '50MB' : '10MB'
+        } limit. ${!isPremium ? 'Upgrade host plan for higher limits.' : ''}`,
+        limitBytes: maxSizeBytes,
+      });
+    }
+
+    const requestedBoardId = req.body?.boardId;
+    const rawFileType = req.body?.fileType;
+    let fileType: 'image' | 'pdf_page' | 'doc_converted' = 'image';
+    if (rawFileType === 'pdf_page') {
+      fileType = 'pdf_page';
+    } else if (rawFileType === 'doc_converted') {
+      fileType = 'doc_converted';
+    } else if (file.mimetype.includes('pdf')) {
+      fileType = 'pdf_page';
+    }
+
+    const cleanFilename = sanitizeFilename(file.originalname);
+    const fileId = crypto.randomUUID();
+    const storagePath = `rooms/${roomId}/${fileId}-${cleanFilename}`;
+
+    try {
+      // 2. Upload to Supabase Storage via service role key
+      const { publicUrl } = await uploadToStorage(
+        storagePath,
+        file.buffer,
+        file.mimetype || 'image/png',
+        cleanFilename
+      );
+
+      // 3. Save to database if configured
+      if (process.env.DATABASE_URL) {
+        const room = await prisma.room.findUnique({
+          where: { id: roomId },
+          include: { boards: true },
+        });
+
+        if (!room) {
+          return res.status(404).json({
+            error: 'NotFound',
+            message: 'Room not found',
+          });
+        }
+
+        // Determine target board (requested board or room's shared board)
+        let targetBoardId = requestedBoardId;
+        if (!targetBoardId) {
+          const sharedBoard = room.boards.find((b) => b.isShared) || room.boards[0];
+          targetBoardId = sharedBoard ? sharedBoard.id : null;
+        }
+
+        if (!targetBoardId) {
+          const newBoard = await prisma.board.create({
+            data: { roomId: room.id, isShared: true },
+          });
+          targetBoardId = newBoard.id;
+        }
+
+        // Determine uploader profile (user or fallback to room host)
+        const uploaderId = req.user?.id || room.hostId;
+
+        const uploadedRecord = await prisma.uploadedFile.create({
+          data: {
+            id: fileId,
+            boardId: targetBoardId,
+            uploadedBy: uploaderId,
+            storagePath,
+            fileType,
+            originalFilename: file.originalname,
+            sizeBytes: file.size,
+          },
+          include: {
+            uploader: {
+              select: { id: true, displayName: true },
+            },
+          },
+        });
+
+        return res.status(201).json({
+          file: {
+            id: uploadedRecord.id,
+            boardId: uploadedRecord.boardId,
+            uploadedBy: uploadedRecord.uploadedBy,
+            storagePath: uploadedRecord.storagePath,
+            fileType: uploadedRecord.fileType,
+            originalFilename: uploadedRecord.originalFilename,
+            sizeBytes: uploadedRecord.sizeBytes,
+            createdAt: uploadedRecord.createdAt.toISOString(),
+            uploaderName: uploadedRecord.uploader.displayName,
+          },
+          url: publicUrl,
+          message: 'File uploaded successfully',
+        });
+      }
+
+      // In-memory fallback
+      const inMemoryFile: InMemoryUploadedFile = {
+        id: fileId,
+        boardId: requestedBoardId || `board-shared-${roomId}`,
+        uploadedBy: req.user?.id || 'guest-uploader',
+        storagePath,
+        fileType,
+        originalFilename: file.originalname,
+        sizeBytes: file.size,
+        createdAt: new Date().toISOString(),
+        url: publicUrl,
+      };
+
+      const existing = inMemoryUploadedFiles.get(roomId) || [];
+      existing.push(inMemoryFile);
+      inMemoryUploadedFiles.set(roomId, existing);
+
+      return res.status(201).json({
+        file: inMemoryFile,
+        url: publicUrl,
+        message: 'File uploaded successfully (in-memory mode)',
+      });
+    } catch (uploadErr: any) {
+      console.error('[Rooms API] Failed to upload file:', uploadErr);
+      return res.status(500).json({
+        error: 'UploadFailed',
+        message: uploadErr?.message || 'Failed to process file upload',
+      });
+    }
+  });
+});
+
+/**
+ * GET /api/rooms/:id/files — List files uploaded to room's board(s)
+ */
+roomsRouter.get('/:id/files', optionalAuth, async (req: Request, res: Response) => {
+  const { id: roomId } = req.params;
+
+  if (process.env.DATABASE_URL) {
+    try {
+      const files = await prisma.uploadedFile.findMany({
+        where: {
+          board: { roomId },
+        },
+        include: {
+          uploader: {
+            select: { id: true, displayName: true },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      const formatted = files.map((f) => ({
+        id: f.id,
+        boardId: f.boardId,
+        uploadedBy: f.uploadedBy,
+        uploaderName: f.uploader?.displayName || 'Unknown',
+        storagePath: f.storagePath,
+        fileType: f.fileType,
+        originalFilename: f.originalFilename,
+        sizeBytes: f.sizeBytes,
+        createdAt: f.createdAt.toISOString(),
+        url: getStoragePublicUrl(f.storagePath),
+      }));
+
+      return res.json({
+        roomId,
+        files: formatted,
+      });
+    } catch (err: any) {
+      console.error('[Rooms API] Failed to fetch room files:', err);
+      return res.status(500).json({
+        error: 'DatabaseError',
+        message: 'Failed to fetch uploaded files',
+      });
+    }
+  }
+
+  const memFiles = inMemoryUploadedFiles.get(roomId) || [];
+  return res.json({
+    roomId,
+    files: memFiles,
+  });
+});
+
 

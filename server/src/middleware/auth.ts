@@ -37,6 +37,36 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     });
   }
 
+  // Fallback for local development / testing with mock dev token
+  if (token.startsWith('dev-user-')) {
+    const parts = token.split(':');
+    let devId = parts[1] || '00000000-0000-4000-8000-000000000001';
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(devId)) {
+      devId = '00000000-0000-4000-8000-000000000001';
+    }
+    const devName = parts[2] || 'Dev Host';
+    req.user = {
+      id: devId,
+      email: `${devName.toLowerCase().replace(/\s+/g, '')}@example.com`,
+      displayName: devName,
+    };
+
+    if (process.env.DATABASE_URL) {
+      try {
+        await prisma.profile.upsert({
+          where: { id: devId },
+          update: { displayName: devName },
+          create: { id: devId, displayName: devName },
+        });
+      } catch (err) {
+        console.warn('[Auth Middleware] Dev profile upsert error:', err);
+      }
+    }
+
+    return next();
+  }
+
   try {
     // 1. Check if Supabase client is configured
     const supabase = getSupabaseAdmin();

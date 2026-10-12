@@ -1,9 +1,10 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Tldraw, Editor } from '@tldraw/tldraw';
-import { GeoShapeGeoStyle } from '@tldraw/tlschema';
+import { GeoShapeGeoStyle, createShapeId, AssetRecordType, TLAsset } from '@tldraw/tlschema';
 import { WhiteboardToolbar } from './WhiteboardToolbar';
 import { useYjsWhiteboardSync } from '../../lib/yjs-sync';
-import { forkBoard } from '../../lib/api';
+import { forkBoard, uploadRoomFile } from '../../lib/api';
+import { renderPdfToPages } from '../../lib/pdf-renderer';
 import {
   UploadCloud,
   GitFork,
@@ -17,6 +18,9 @@ import {
   Eye,
   EyeOff,
   User,
+  Loader2,
+  Highlighter,
+  AlertCircle,
 } from 'lucide-react';
 
 interface WhiteboardCanvasProps {
@@ -52,6 +56,13 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
   const [isForking, setIsForking] = useState(false);
+
+  // File Upload & Annotation Layer State (Phase 6)
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgressText, setUploadProgressText] = useState<string | null>(null);
+  const [uploadFeedback, setUploadFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [showAnnotations, setShowAnnotations] = useState(true);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Follow-host camera state (non-hosts default to following on join)
   const isHost = Boolean(user?.isHost);
@@ -202,6 +213,9 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
           editor.setCurrentTool('line');
         } else {
           editor.setCurrentTool(tool as any);
+          if (tool === 'draw' || tool === 'highlight') {
+            setShowAnnotations(true);
+          }
         }
         lastToolIdRef.current = tool;
         setActiveTool(tool);
@@ -210,6 +224,222 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
       }
     },
     [editor, canDraw]
+  );
+
+  // Trigger file upload dialog
+  const handleTriggerUpload = useCallback(() => {
+    if (!canDraw || isUploading) return;
+    if (onUploadFile) {
+      onUploadFile();
+    }
+    fileInputRef.current?.click();
+  }, [canDraw, isUploading, onUploadFile]);
+
+  // Handle selected image or PDF file upload (Phase 6)
+  const handleFileSelected = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      // Reset input value so same file can be re-selected if desired
+      e.target.value = '';
+
+      // 1. Enforce 10MB file size limit client-side (Free tier cap)
+      const MAX_SIZE = 10 * 1024 * 1024;
+      if (file.size > MAX_SIZE) {
+        setUploadFeedback({
+          type: 'error',
+          message: `File exceeds 10MB limit (${(file.size / (1024 * 1024)).toFixed(1)}MB). Free tier maximum is 10MB.`,
+        });
+        setTimeout(() => setUploadFeedback(null), 6000);
+        return;
+      }
+
+      setUploadFeedback(null);
+      setIsUploading(true);
+
+      try {
+        const isPdf =
+          file.type === 'application/pdf' ||
+          file.name.toLowerCase().endsWith('.pdf');
+
+        if (isPdf) {
+          setUploadProgressText('Parsing PDF pages...');
+          const pages = await renderPdfToPages(file, (curr, total) => {
+            setUploadProgressText(`Rendering page ${curr}/${total}...`);
+          });
+
+          if (pages.length === 0) {
+            throw new Error('No pages could be extracted from this PDF');
+          }
+
+          const center = editor?.getViewportPageBounds()?.center || { x: 400, y: 300 };
+          const startX = Math.round(center.x - pages[0].width / 2);
+          let currentY = Math.round(center.y - pages[0].height / 2);
+
+          const createdShapeIds: string[] = [];
+
+          for (let i = 0; i < pages.length; i++) {
+            const page = pages[i];
+            setUploadProgressText(`Uploading page ${i + 1}/${pages.length}...`);
+
+            const pageFileName = `${file.name.replace(/\.pdf$/i, '')}-page-${page.pageNumber}.png`;
+            const uploadRes = await uploadRoomFile(roomId, page.blob, {
+              originalFilename: pageFileName,
+              fileType: 'pdf_page',
+              boardId: isForked ? forkedBoardId : null,
+              token,
+            });
+
+            if (editor) {
+              const assetId = AssetRecordType.createId();
+              const asset: TLAsset = {
+                id: assetId,
+                typeName: 'asset',
+                type: 'image',
+                props: {
+                  name: pageFileName,
+                  src: uploadRes.url,
+                  w: page.width,
+                  h: page.height,
+                  mimeType: 'image/png',
+                  isAnimated: false,
+                },
+                meta: {},
+              };
+              editor.createAssets([asset]);
+
+              const shapeId = createShapeId();
+              editor.createShape({
+                id: shapeId,
+                type: 'image',
+                x: startX,
+                y: currentY,
+                props: {
+                  w: page.width,
+                  h: page.height,
+                  assetId: assetId,
+                  url: uploadRes.url,
+                },
+                meta: {
+                  authorName: user?.displayName || 'User',
+                  authorColor: user?.color || '#4f46e5',
+                  fileType: 'pdf_page',
+                  originalFilename: file.name,
+                  pageNumber: page.pageNumber,
+                },
+              });
+              createdShapeIds.push(shapeId as string);
+
+              // 40px spacing between pages
+              currentY += page.height + 40;
+            }
+          }
+
+          if (editor && createdShapeIds.length > 0) {
+            editor.setSelectedShapes([createdShapeIds[0] as any]);
+          }
+
+          setUploadFeedback({
+            type: 'success',
+            message: `Uploaded PDF (${pages.length} ${pages.length === 1 ? 'page' : 'pages'})`,
+          });
+          setTimeout(() => setUploadFeedback(null), 4000);
+        } else {
+          // Standard image upload
+          setUploadProgressText('Processing image...');
+
+          const dimensions = await new Promise<{ width: number; height: number }>((resolve) => {
+            const img = new Image();
+            const objectUrl = URL.createObjectURL(file);
+            img.onload = () => {
+              URL.revokeObjectURL(objectUrl);
+              resolve({ width: img.naturalWidth || 600, height: img.naturalHeight || 400 });
+            };
+            img.onerror = () => {
+              URL.revokeObjectURL(objectUrl);
+              resolve({ width: 600, height: 400 });
+            };
+            img.src = objectUrl;
+          });
+
+          // Scale down if larger than 900px wide for clean canvas fit
+          const maxWidth = 900;
+          const scale = dimensions.width > maxWidth ? maxWidth / dimensions.width : 1;
+          const displayWidth = Math.round(dimensions.width * scale);
+          const displayHeight = Math.round(dimensions.height * scale);
+
+          setUploadProgressText('Uploading to storage...');
+          const uploadRes = await uploadRoomFile(roomId, file, {
+            originalFilename: file.name,
+            fileType: 'image',
+            boardId: isForked ? forkedBoardId : null,
+            token,
+          });
+
+          if (editor) {
+            const center = editor.getViewportPageBounds()?.center || { x: 400, y: 300 };
+            const posX = Math.round(center.x - displayWidth / 2);
+            const posY = Math.round(center.y - displayHeight / 2);
+
+            const assetId = AssetRecordType.createId();
+            const asset: TLAsset = {
+              id: assetId,
+              typeName: 'asset',
+              type: 'image',
+              props: {
+                name: file.name,
+                src: uploadRes.url,
+                w: displayWidth,
+                h: displayHeight,
+                mimeType: file.type || 'image/png',
+                isAnimated: false,
+              },
+              meta: {},
+            };
+            editor.createAssets([asset]);
+
+            const shapeId = createShapeId();
+            editor.createShape({
+              id: shapeId,
+              type: 'image',
+              x: posX,
+              y: posY,
+              props: {
+                w: displayWidth,
+                h: displayHeight,
+                assetId: assetId,
+                url: uploadRes.url,
+              },
+              meta: {
+                authorName: user?.displayName || 'User',
+                authorColor: user?.color || '#4f46e5',
+                fileType: 'image',
+                originalFilename: file.name,
+              },
+            });
+            editor.setSelectedShapes([shapeId as any]);
+          }
+
+          setUploadFeedback({
+            type: 'success',
+            message: `Uploaded ${file.name}`,
+          });
+          setTimeout(() => setUploadFeedback(null), 4000);
+        }
+      } catch (err: any) {
+        console.error('[WhiteboardCanvas] Upload error:', err);
+        setUploadFeedback({
+          type: 'error',
+          message: err?.message || 'Upload failed',
+        });
+        setTimeout(() => setUploadFeedback(null), 6000);
+      } finally {
+        setIsUploading(false);
+        setUploadProgressText(null);
+      }
+    },
+    [editor, roomId, isForked, forkedBoardId, token, user]
   );
 
   // Fork shared board into a private copy
@@ -286,7 +516,11 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
   };
 
   return (
-    <div className="relative w-full h-full flex-1 overflow-hidden bg-[#fdfdfd]">
+    <div
+      className={`relative w-full h-full flex-1 overflow-hidden bg-[#fdfdfd] ${
+        !showAnnotations ? 'sb-hide-annotations' : ''
+      }`}
+    >
       {/* Top Banner when in Forked / Personal Copy Mode */}
       {isForked ? (
         <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 flex items-center gap-3 px-4 py-2 bg-indigo-900/90 backdrop-blur-md text-white border hairline-border border-indigo-700/50 rounded-2xl shadow-sm text-xs animate-in fade-in slide-in-from-top-2 duration-200">
@@ -333,7 +567,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
                     className="ml-1 text-[10px] text-neutral-400 hover:text-neutral-700 transition-colors cursor-pointer"
                     title="stop following host viewport"
                   >
-                    <EyeOff className="w-3 h-3" />
+                    <EyeOff className="w-3.5 h-3.5" />
                   </button>
                 </div>
               ) : (
@@ -363,6 +597,24 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
         </div>
       )}
 
+      {/* Non-intrusive Upload Status & Error Banner */}
+      {uploadFeedback && (
+        <div
+          className={`absolute top-14 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-medium shadow-md backdrop-blur-sm animate-in fade-in slide-in-from-top-1 ${
+            uploadFeedback.type === 'error'
+              ? 'bg-rose-900/90 text-white border border-rose-700/50'
+              : 'bg-neutral-900/90 text-white border border-neutral-700/50'
+          }`}
+        >
+          {uploadFeedback.type === 'error' ? (
+            <AlertCircle className="w-3.5 h-3.5 text-rose-400" />
+          ) : (
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+          )}
+          <span>{uploadFeedback.message}</span>
+        </div>
+      )}
+
       {/* Tldraw Canvas Engine with hidden default UI */}
       <div
         className="absolute inset-0 z-0"
@@ -389,16 +641,84 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
       />
 
       {/* Canvas-Anchored Action: Upload File (bottom-left corner per DESIGN.md) */}
-      <div className="absolute bottom-4 left-4 z-20 hidden sm:block">
+      <div className="absolute bottom-4 left-4 z-20 flex items-center gap-2">
         <button
-          onClick={onUploadFile}
-          disabled={!canDraw}
+          onClick={handleTriggerUpload}
+          disabled={!canDraw || isUploading}
           className="flex items-center gap-1.5 px-3 py-2 bg-white/95 backdrop-blur-sm border hairline-border rounded-xl text-xs font-medium text-neutral-700 hover:bg-neutral-50 shadow-xs transition-colors cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
-          title="upload document, image, or PDF"
+          title="upload document, image, or PDF (up to 10MB)"
         >
-          <UploadCloud className="w-3.5 h-3.5 text-indigo-600" />
-          <span>upload file</span>
+          {isUploading ? (
+            <Loader2 className="w-3.5 h-3.5 text-indigo-600 animate-spin" />
+          ) : (
+            <UploadCloud className="w-3.5 h-3.5 text-indigo-600" />
+          )}
+          <span>{isUploading ? uploadProgressText || 'uploading...' : 'upload file'}</span>
         </button>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/png,image/jpeg,image/webp,image/svg+xml,image/gif,.pdf,application/pdf"
+          onChange={handleFileSelected}
+          className="hidden"
+        />
+
+        {/* Canvas-Anchored Annotation Layer Toggle (Highlighter & Pen on/off) */}
+        <button
+          onClick={() => setShowAnnotations(!showAnnotations)}
+          className={`hidden sm:flex items-center gap-1.5 px-2.5 py-2 rounded-xl border hairline-border text-xs font-medium shadow-xs transition-colors cursor-pointer ${
+            showAnnotations
+              ? 'bg-white/95 text-neutral-700 hover:bg-neutral-50'
+              : 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100'
+          }`}
+          title={showAnnotations ? 'hide ink & highlighter annotations' : 'show ink & highlighter annotations'}
+        >
+          {showAnnotations ? (
+            <>
+              <Highlighter className="w-3.5 h-3.5 text-indigo-600" />
+              <span>annotations: on</span>
+            </>
+          ) : (
+            <>
+              <EyeOff className="w-3.5 h-3.5 text-amber-600" />
+              <span>annotations: hidden</span>
+            </>
+          )}
+        </button>
+
+        {/* Canvas-Anchored Subtle Zoom Controls */}
+        <div className="hidden md:flex items-center gap-0.5 bg-white/95 backdrop-blur-sm border hairline-border rounded-xl p-1 shadow-xs text-neutral-600">
+          <button
+            onClick={handleZoomOut}
+            className="p-1 rounded-lg hover:bg-neutral-100 transition-colors cursor-pointer"
+            title="zoom out (-)"
+          >
+            <ZoomOut className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={handleResetZoom}
+            className="px-1.5 py-0.5 text-[10px] font-mono hover:bg-neutral-100 rounded-md transition-colors cursor-pointer"
+            title="reset zoom (100%)"
+          >
+            {zoomLevel}%
+          </button>
+          <button
+            onClick={handleZoomIn}
+            className="p-1 rounded-lg hover:bg-neutral-100 transition-colors cursor-pointer"
+            title="zoom in (+)"
+          >
+            <ZoomIn className="w-3.5 h-3.5" />
+          </button>
+          <div className="w-px h-3 bg-neutral-200 mx-0.5" />
+          <button
+            onClick={handleZoomToFit}
+            className="p-1 rounded-lg hover:bg-neutral-100 transition-colors cursor-pointer"
+            title="zoom to fit (shift+1)"
+          >
+            <Maximize className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
 
       {/* Canvas-Anchored Action: Fork My Board / Back to Shared (bottom-right corner per DESIGN.md) */}
@@ -424,39 +744,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
           </button>
         )}
       </div>
-
-      {/* Canvas-Anchored Subtle Zoom Controls (bottom-left next to upload button) */}
-      <div className="absolute bottom-4 left-36 z-20 hidden md:flex items-center gap-0.5 bg-white/95 backdrop-blur-sm border hairline-border rounded-xl p-1 shadow-xs text-neutral-600">
-        <button
-          onClick={handleZoomOut}
-          className="p-1 rounded-lg hover:bg-neutral-100 transition-colors cursor-pointer"
-          title="zoom out (-)"
-        >
-          <ZoomOut className="w-3.5 h-3.5" />
-        </button>
-        <button
-          onClick={handleResetZoom}
-          className="px-1.5 py-0.5 text-[10px] font-mono hover:bg-neutral-100 rounded-md transition-colors cursor-pointer"
-          title="reset zoom (100%)"
-        >
-          {zoomLevel}%
-        </button>
-        <button
-          onClick={handleZoomIn}
-          className="p-1 rounded-lg hover:bg-neutral-100 transition-colors cursor-pointer"
-          title="zoom in (+)"
-        >
-          <ZoomIn className="w-3.5 h-3.5" />
-        </button>
-        <div className="w-px h-3 bg-neutral-200 mx-0.5" />
-        <button
-          onClick={handleZoomToFit}
-          className="p-1 rounded-lg hover:bg-neutral-100 transition-colors cursor-pointer"
-          title="zoom to fit (shift+1)"
-        >
-          <Maximize className="w-3.5 h-3.5" />
-        </button>
-      </div>
     </div>
   );
 };
+

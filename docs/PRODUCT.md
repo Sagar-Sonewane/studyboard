@@ -63,6 +63,29 @@ Billing is tied to the **host's account**, not per-participant.
   grace period before treating it as a real departure and triggering the
   same reassignment flow. Don't punish flaky wifi.
 
+## Whiteboard collaboration controls (added after Phase 5 testing)
+
+Three behaviors that matter once real multiplayer drawing is in use — these
+were gaps found during Phase 5 testing and are now part of the spec:
+
+- **Draw permission — locked by default.** New participants join in
+  view-only mode; they cannot draw until the host explicitly approves them.
+  A participant can send a "request to draw" which notifies the host; the
+  host approves or denies per-person. The host can also revoke a
+  previously-granted permission at any time. This is **session-scoped, not
+  persisted** — permission resets to locked on rejoin/reconnect; there is
+  no "remember this person" list for MVP.
+- **Follow-host viewport.** Participants default to following the host's
+  camera/viewport (pan + zoom) when they join, so if the host zooms into a
+  section to write something, everyone sees that same area without manual
+  effort. Any participant can break away at any time (pan/zoom themselves,
+  or an explicit "stop following" toggle) to look at another part of the
+  board independently, then re-follow whenever they want.
+- **Per-user attribution.** Each participant is assigned a consistent color
+  on join (used for their live cursor while drawing). Shapes/strokes also
+  carry an author reference so hovering or selecting something after the
+  fact shows who drew it, even after the live cursor is gone.
+
 ## Fork-your-own-copy behavior
 
 - Forking clones the current state of the shared Yjs document into a new,
@@ -70,6 +93,21 @@ Billing is tied to the **host's account**, not per-participant.
 - Edits on the forked copy never sync back to the shared board unless/until
   a future "merge back" feature is built (not in scope yet — flag as a
   possible v2 feature, don't build speculatively).
+
+## Routing / navigation structure
+
+- `/` — the marketing landing page (see DESIGN.md's "Landing page" section
+  for the full visual/content spec). Shown to anyone arriving without a
+  room invite.
+- `/room/:inviteCode` — **bypasses the landing page entirely**, goes
+  straight to a lightweight join screen (enter name → join). Someone
+  clicking a friend's invite link should never have to sit through
+  marketing copy first — that's friction at exactly the moment you want
+  none.
+- `/app` (or `/dashboard`) — logged-in home: a user's past/active rooms,
+  create-new-room entry point. Minimum viable version can simply redirect
+  a logged-in user straight into room creation if a full dashboard isn't
+  built yet.
 
 ## Explicitly out of scope for MVP
 

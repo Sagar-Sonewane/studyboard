@@ -335,6 +335,81 @@ in a separate menu/modal that takes focus away from the board.
 
 ---
 
+## Phase 6.4 — Build the landing page
+
+```
+Read first: /docs/DESIGN.md ("Landing page — full build spec" section, in
+full — it has exact color tokens, fonts, component specs, and section-by-
+section content) and /docs/PRODUCT.md ("Routing / navigation structure"
+section).
+
+Build the marketing landing page at the `/` route, to the spec in
+/docs/DESIGN.md exactly — don't invent a new visual direction, this page
+has an intentionally distinctive design (paper/ink/marker palette, hard
+offset shadows, tilted sticky notes, ticket-stub pricing cards, a
+highlighter-stroke mark behind one headline word) that differs from the
+muted in-app UI on purpose, and it's already fully specified.
+
+Implement all six sections in order: nav, hero (with the tilted whiteboard
+preview card and audience chip row), the quiet "who it's for" strip, the
+three feature sticky notes, the three pricing ticket-stubs (matching the
+actual plan prices in PRODUCT.md), and the footer CTA.
+
+Wire up routing per PRODUCT.md: `/` shows this page; `/room/:inviteCode`
+must continue to bypass it entirely and go straight to the join screen —
+confirm this still works after adding the landing page, don't accidentally
+route invite links through it. "Create a room" and "Start a room" CTAs on
+this page should lead into the existing signup/room-creation flow.
+
+This is a static marketing page — it doesn't need any of the realtime/
+whiteboard/voice machinery, so there's no need to test with two browser
+tabs for this phase. Do a visual check yourself against the spec (colors,
+fonts, hard-shadow style, tilted sticky notes) rather than just confirming
+it builds without errors.
+```
+
+---
+
+## Phase 6.5 — Deploy for friend-testing
+
+```
+Read first: /docs/STRUCTURE.md ("Deployment" section, in full).
+
+Deploy the app for real-world friend-testing, following the hosting split
+in /docs/STRUCTURE.md exactly — frontend to Vercel, backend to Railway or
+Render (NOT Vercel, since the backend needs persistent WebSocket support
+that Vercel's serverless functions don't provide).
+
+1. Deploy /client to Vercel: connect the repo, set build root to /client,
+   configure the env vars listed in STRUCTURE.md's Deployment section.
+2. Deploy /server to Railway or Render: connect the repo, set build root
+   to /server, configure the backend env vars (DATABASE_URL,
+   SUPABASE_SERVICE_ROLE_KEY, LIVEKIT_API_KEY/SECRET, etc.) — leave Stripe
+   vars unset for now, billing is intentionally paused.
+3. Update backend CORS to allow the deployed Vercel origin.
+4. Confirm the frontend's WebSocket/Yjs connection code builds its URLs
+   from env vars (using wss://) rather than any hardcoded
+   ws://localhost reference — fix if hardcoded.
+5. Smoke-test the full flow on the deployed URLs: sign up, create a room,
+   invite link works for a guest join, voice connects, whiteboard syncs
+   between two real separate devices/networks (not just two tabs on one
+   machine — this is the first real test of latency across an actual
+   network, not localhost).
+
+Report the final Vercel URL and backend URL once deployed and smoke-tested.
+```
+
+---
+
+**Phases 7 and 8 (billing and the grace-period pause flow) are
+intentionally PAUSED after Phase 6.5.** Do not start them without explicit
+go-ahead — the plan is to gather feedback from friend-testing on the
+free-tier experience first, since there's no value building a payment flow
+around limits that haven't been validated yet. See PROJECT_STATUS.md for
+current status before resuming here.
+
+---
+
 ## Phase 7 — Plans, limits, and Stripe integration
 
 ```

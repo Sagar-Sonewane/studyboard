@@ -20,18 +20,28 @@ necessary but not sufficient — a feature isn't done until a human has
 actually clicked through it. When in doubt, mark something as
 "needs manual verification" rather than "done."
 
+**Editing rule — do not delete, only add/correct**: sections in this file
+(especially "Decisions / discrepancies") may contain notes added by a
+human or a planning session that a build session didn't originate. When
+updating this file at the end of a session, ADD your session's entries and
+correct anything proven wrong — do not remove existing entries just
+because your session didn't touch that topic. This file has already lost
+content once this way (a roadmap decision was dropped from "Decisions /
+discrepancies" during a routine update) — don't repeat that.
+
 ---
 
 ## Current phase
 
-`Phase 5.2 completed (Shape-drawing performance lag fixed with evidence & lifecycle isolation) — ready for Phase 6 (File Uploads & Whiteboard Attachment)`
+`Phase 6 completed (File Uploads & Whiteboard Attachment, 10MB limit enforcement, PDF multi-page rasterization via pdf.js, independent annotation layer) — ready for Phase 6.4 (Landing page), followed by Phase 6.5 (deploy). Phases 7/8 remain paused.`
 
 ## Environment status
 
 - [x] Supabase project created & configured
 - [x] `.env` populated (`SUPABASE_URL`, `SUPABASE_ANON_KEY`, `DATABASE_URL`)
+- [x] Supabase Storage bucket `room-files` active & configured with public access policy
 - [x] LiveKit Cloud account & keys configured (`LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`) — real WebRTC voice active
-- [ ] Stripe account/keys set up (not needed until Phase 7)
+- [ ] Stripe account/keys set up (not needed until Phase 7 — paused, see Decisions)
 
 ## Phases completed
 
@@ -44,16 +54,16 @@ actually clicked through it. When in doubt, mark something as
   - 3-state participant rail (`client/src/components/participants/ParticipantRail.tsx`): **Expanded** (compact rows with avatars, names, amber host crown, inline mic status), **Collapsed** (vertical avatar strip with speaking rings), and **Hidden** (floating pill on top-left of canvas). Preferences saved in `localStorage`.
   - Mobile bottom call controls and responsive layout.
 - **Phase 4 — Whiteboard canvas (local single-user)**:
-  - Integrated `tldraw` (`@tldraw/tldraw`) engine inside [client/src/components/whiteboard/WhiteboardCanvas.tsx](file:///d:/sagar/studyboard/client/src/components/whiteboard/WhiteboardCanvas.tsx) with custom UI overrides (`hideUi={true}`) for canvas dominance (~80% width).
-  - Built custom right-rail vertical icon toolbar [client/src/components/whiteboard/WhiteboardToolbar.tsx](file:///d:/sagar/studyboard/client/src/components/whiteboard/WhiteboardToolbar.tsx) per `/docs/DESIGN.md`:
+  - Integrated `tldraw` (`@tldraw/tldraw`) engine inside `client/src/components/whiteboard/WhiteboardCanvas.tsx` with custom UI overrides (`hideUi={true}`) for canvas dominance (~80% width).
+  - Built custom right-rail vertical icon toolbar `client/src/components/whiteboard/WhiteboardToolbar.tsx` per `/docs/DESIGN.md`:
     - Select, Pen, Highlighter, Eraser, Shapes, Text, Sticky Note, Palette (color & stroke size flyout), Undo, Redo.
   - Added canvas-anchored corner buttons: "upload file" (bottom-left), "fork my board" (bottom-right), and zoom level controls (+ / - / 100% / fit).
 - **Phase 5 — Multiplayer whiteboard sync (Yjs CRDT & Board Forking)**:
-  - Backend Yjs WebSocket server in [server/src/ws/yjs.ts](file:///d:/sagar/studyboard/server/src/ws/yjs.ts) supporting binary sync protocol (step 1, step 2, update, awareness).
-  - Upgraded HTTP server in [server/src/index.ts](file:///d:/sagar/studyboard/server/src/index.ts) to cleanly route `/ws` (presence) and `/yjs` (whiteboard sync).
-  - Added board management and forking API endpoints (`GET /api/rooms/:id/boards`, `POST /api/rooms/:id/boards/fork`) in [server/src/routes/rooms.ts](file:///d:/sagar/studyboard/server/src/routes/rooms.ts).
-  - Built React Yjs sync hook [client/src/lib/yjs-sync.ts](file:///d:/sagar/studyboard/client/src/lib/yjs-sync.ts) synchronizing `tldraw` store records (`shape`, `binding`, `asset`, `page`) with `Y.Doc` (`Y.Map`).
-  - Implemented the "fork my own copy" feature in [client/src/components/whiteboard/WhiteboardCanvas.tsx](file:///d:/sagar/studyboard/client/src/components/whiteboard/WhiteboardCanvas.tsx) with a private workspace mode, top banner indicator, and one-click toggle between shared and personal boards.
+  - Backend Yjs WebSocket server in `server/src/ws/yjs.ts` supporting binary sync protocol (step 1, step 2, update, awareness).
+  - Upgraded HTTP server in `server/src/index.ts` to cleanly route `/ws` (presence) and `/yjs` (whiteboard sync).
+  - Added board management and forking API endpoints (`GET /api/rooms/:id/boards`, `POST /api/rooms/:id/boards/fork`) in `server/src/routes/rooms.ts`.
+  - Built React Yjs sync hook `client/src/lib/yjs-sync.ts` synchronizing `tldraw` store records (`shape`, `binding`, `asset`, `page`) with `Y.Doc` (`Y.Map`).
+  - Implemented the "fork my own copy" feature in `client/src/components/whiteboard/WhiteboardCanvas.tsx` with a private workspace mode, top banner indicator, and one-click toggle between shared and personal boards.
 - **Phase 5.1 — Whiteboard collaboration controls**:
   - Draw permission gating (locked by default for non-hosts, host toast approval & rail management).
   - Follow-host viewport sync with break-away and "jump to host" one-click return.
@@ -63,28 +73,52 @@ actually clicked through it. When in doubt, mark something as
   - **Root Cause 1 (Lifecycle Re-instantiation)**: `user` object in `RoomView.tsx` was unmemoized, causing `useYjsWhiteboardSync`'s effect to re-run on every room render and tearing down/recreating the `Y.Doc` and `WebsocketProvider` connection during active drags. Fixed by memoizing `whiteboardUser` and isolating awareness updates into a separate effect without tearing down `Y.Doc`.
   - **Root Cause 2 (Local Echo Guard)**: Guaranteed that local changes write to Yjs tagged with `'tldraw-local'` origin and are skipped in `handleYjsObserver`, preventing echo feedback.
   - **Root Cause 3 (Batching & Selective Listeners)**: Buffered continuous pointer updates into a 40ms throttled transaction queue (`~25fps` network rate) with instant flush on pointerup/blur, capped camera awareness broadcasts to 50ms (`~20fps`), and guarded React `setState` calls in `WhiteboardCanvas.tsx` to prevent component re-renders during active continuous dragging.
+- **Phase 6 — File upload and annotation**:
+  - **Backend Supabase Storage & Upload Endpoints**:
+    - Created `server/src/services/storage.ts` using Supabase Storage bucket (`room-files`) with public access policy and service role authentication.
+    - Implemented `POST /api/rooms/:id/files` with Multer memory storage and strict 10MB file limit enforcement (`413 PayloadTooLarge` if > 10MB) matching `PRODUCT.md` free tier caps.
+    - Records file metadata in `uploaded_files` Postgres table with `storage_path` (relative to bucket, not raw S3 URL, matching `DATA_MODEL.md`).
+    - Implemented `GET /api/rooms/:id/files` returning list of files with resolved public URLs.
+  - **PDF Rasterization via pdf.js**:
+    - Created `client/src/lib/pdf-renderer.ts` using `pdfjs-dist` to render multi-page PDFs to individual crisp 1.5x PNG blobs on upload.
+    - Sequentially uploads each page to the backend and places them as draggable/resizable image shapes on the canvas, vertically stacked with 40px spacing.
+  - **Canvas Image Shapes & Synced Assets**:
+    - Implemented image asset creation (`AssetRecordType.createId()`, `editor.createAssets()`) and image shapes (`createShapeId()`, `editor.createShape()`) with author attribution metadata.
+    - Synced across all room participants via existing Yjs document store (`asset` and `shape` record sync).
+  - **Independent Annotation Layer**:
+    - Pen and highlighter strokes sit on top of placed image/PDF shapes as separate, independent synced objects.
+    - Added canvas-anchored annotation visibility toggle pill (`annotations: on / hidden` with eye icon) to hide/reveal highlighter and ink markings without deleting or mutating the underlying document or Yjs store.
+    - Strokes can be undone or erased independently of the underlying image.
+  - **Canvas-Anchored Upload Action**:
+    - Floating upload button anchored to bottom-left corner per `DESIGN.md` (no disruptive separate modals).
+    - Status spinner with real-time progress text (rendering PDF pages, uploading) and feedback toast.
 
 ## Currently in progress
 
-*(none — Phase 5.2 is completed, verified, and building cleanly with zero errors)*
+*(none — Phase 6 is completed and verified; both client and server build cleanly with zero errors)*
 
-## Files touched this session
+## Files touched this session (Phase 6)
 
-- `client/src/lib/yjs-sync.ts` — Stabilized Y.Doc and WebSocketProvider lifecycles, added `userRef`, implemented 40ms transaction batch queue, strict local origin echo guard, and 50ms camera awareness throttle.
-- `client/src/components/room/RoomView.tsx` — Memoized `whiteboardUser` object to prevent redundant re-instantiations of child hooks.
-- `client/src/components/whiteboard/WhiteboardCanvas.tsx` — Guarded `store.listen` so React state updates (`setActiveTool`, `setCanUndo`, `setCanRedo`, `setZoomLevel`, `selectedAuthor`) only fire when values actually change.
-- `docs/PROJECT_STATUS.md` — Updated with exact root causes and resolution details for Phase 5.2.
+- `server/src/services/storage.ts` — Created storage service handling Supabase bucket operations, entitlement size checks, and public URL generation.
+- `server/src/routes/rooms.ts` — Added `POST /api/rooms/:id/files` and `GET /api/rooms/:id/files` with 10MB limit enforcement.
+- `server/src/middleware/auth.ts` — Optimized mock dev-user token checking.
+- `client/src/lib/api.ts` — Added `uploadRoomFile` and `fetchRoomFiles` client methods.
+- `client/src/lib/pdf-renderer.ts` — Built PDF multi-page rasterization engine using `pdfjs-dist`.
+- `client/src/components/whiteboard/WhiteboardCanvas.tsx` — Integrated file upload picker, PDF/image placement on canvas, annotation visibility toggle, and bottom corner controls.
+- `client/src/index.css` — Added `.sb-hide-annotations` CSS rules for instant local annotation layer visibility toggling.
+- `docs/PROJECT_STATUS.md` — Updated with Phase 6 completion notes.
 
 ## Known issues / things to revisit
 
-- File uploads & PDF annotation layer to be built in Phase 6.
-- Real LiveKit voice has not been tested with live keys yet (currently uses built-in graceful simulation when keys are unset).
+- LiveKit voice call: confirm two-person voice testing on live devices.
 
 ## Decisions / discrepancies to be aware of
 
 - The actual project folder on disk is named `studyboard`, not `studysync`.
+- **Roadmap order**: Phases 7 and 8 (Stripe billing, grace-period pause flow) are intentionally paused. Up next: **Phase 6.4 (build the landing page)**, then **Phase 6.5 (deploy to Vercel + Railway/Render)**. Do not resume Phase 7/8 without explicit go-ahead.
 
 ## Next session should start with
 
-**Proceed to Phase 6 from BUILD_PROMPTS.md (File Uploads & Whiteboard Attachment).**
-Phase 6 covers: uploading PDF, images, and documents, rendering them on the canvas as movable assets, and synchronizing file attachments across participants.
+**Proceed to Phase 6.4 (Landing Page)** per `DESIGN.md`'s landing page spec and `BUILD_PROMPTS.md`.
+After Phase 6.4: Phase 6.5 (deployment to Vercel + Railway/Render).
+

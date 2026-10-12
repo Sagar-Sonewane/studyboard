@@ -23,3 +23,13 @@ code, pre {
   border-width: 0.5px;
   border-color: rgba(255, 255, 255, 0.12);
 }
+
+/* Annotation Layer Toggle (allows toggling highlighter and drawing annotations on/off) */
+.sb-hide-annotations [data-shape-type="draw"],
+.sb-hide-annotations [data-shape-type="highlight"] {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+  transition: opacity 0.15s ease-out;
+}
+
