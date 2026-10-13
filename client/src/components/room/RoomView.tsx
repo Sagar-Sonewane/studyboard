@@ -26,7 +26,7 @@ interface RoomViewProps {
 export const RoomView: React.FC<RoomViewProps> = ({ room, session, onLeave }) => {
   const [copied, setCopied] = useState(false);
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
-  const inviteUrl = `${window.location.origin}/?join=${room.inviteCode}`;
+  const inviteUrl = `${window.location.origin}/room/${room.inviteCode}`;
 
   const participantName = session.user?.displayName || session.guest?.name || 'Participant';
 

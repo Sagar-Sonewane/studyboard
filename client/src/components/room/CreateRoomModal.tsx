@@ -43,7 +43,7 @@ export const CreateRoomModal: React.FC<CreateRoomModalProps> = ({
   };
 
   const getInviteLink = (inviteCode: string) => {
-    return `${window.location.origin}/?join=${inviteCode}`;
+    return `${window.location.origin}/room/${inviteCode}`;
   };
 
   const handleCopyLink = (code: string) => {

@@ -7,6 +7,50 @@
 
 :root {
   font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  --paper: #F7F5EF;
+  --ink: #15162B;
+  --blue: #3355FF;
+  --blue-tint: #DCE3FF;
+  --yellow: #FFDD33;
+  --yellow-tint: #FFF3C2;
+  --coral: #FF5B4C;
+  --coral-tint: #FFDAD5;
+  --graphite: #6B6D7A;
+}
+
+.font-display {
+  font-family: 'Space Grotesk', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* Landing Page Signature Devices: Hard Offset Shadows */
+.hard-shadow {
+  box-shadow: 4px 4px 0 #15162B;
+}
+
+.hard-shadow-sm {
+  box-shadow: 2px 2px 0 #15162B;
+}
+
+.hard-shadow-md {
+  box-shadow: 5px 5px 0 #15162B;
+}
+
+.hard-shadow-lg {
+  box-shadow: 6px 6px 0 #15162B;
+}
+
+.hard-shadow-hover {
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.hard-shadow-hover:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 #15162B;
+}
+
+.hard-shadow-hover:active {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 #15162B;
 }
 
 code, pre {

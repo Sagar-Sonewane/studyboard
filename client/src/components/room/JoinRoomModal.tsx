@@ -6,6 +6,7 @@ import { X, LogIn, User as UserIcon, Loader2, AlertCircle } from 'lucide-react';
 interface JoinRoomModalProps {
   isOpen: boolean;
   initialInviteCode?: string;
+  isStandalone?: boolean;
   onClose: () => void;
   onRoomJoined: (joined: JoinRoomResponse & { roomDetails?: RoomDetails }) => void;
 }
@@ -13,6 +14,7 @@ interface JoinRoomModalProps {
 export const JoinRoomModal: React.FC<JoinRoomModalProps> = ({
   isOpen,
   initialInviteCode = '',
+  isStandalone = false,
   onClose,
   onRoomJoined,
 }) => {
@@ -78,7 +80,24 @@ export const JoinRoomModal: React.FC<JoinRoomModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+    <div
+      className={
+        isStandalone
+          ? 'min-h-screen bg-[#F7F5EF] flex flex-col items-center justify-center p-4'
+          : 'fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4'
+      }
+    >
+      {isStandalone && (
+        <a href="/" className="flex items-center gap-2 mb-6 group cursor-pointer">
+          <div className="w-8 h-8 rounded-lg bg-[#15162B] text-[#F7F5EF] flex items-center justify-center font-display font-black text-sm shadow-[2px_2px_0px_#3355FF]">
+            SS
+          </div>
+          <span className="font-display font-bold text-xl tracking-tight text-[#15162B]">
+            StudySync
+          </span>
+        </a>
+      )}
+
       <div className="bg-white rounded-xl max-w-md w-full border hairline-border shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
         {/* Header */}
         <div className="px-6 py-4 border-b hairline-border flex items-center justify-between">
@@ -121,9 +140,12 @@ export const JoinRoomModal: React.FC<JoinRoomModalProps> = ({
                 type="button"
                 onClick={() => {
                   // extract code if full URL was pasted
-                  const clean = inviteCode.includes('join=')
-                    ? inviteCode.split('join=')[1]?.split('&')[0]
-                    : inviteCode;
+                  let clean = inviteCode.trim();
+                  if (clean.includes('/room/')) {
+                    clean = clean.split('/room/')[1]?.split('?')[0]?.split('/')[0] || clean;
+                  } else if (clean.includes('join=')) {
+                    clean = clean.split('join=')[1]?.split('&')[0] || clean;
+                  }
                   resolveInvite(clean);
                 }}
                 disabled={resolving || !inviteCode.trim()}

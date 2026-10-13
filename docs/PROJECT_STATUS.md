@@ -33,7 +33,7 @@ discrepancies" during a routine update) — don't repeat that.
 
 ## Current phase
 
-`Phase 6 completed (File Uploads & Whiteboard Attachment, 10MB limit enforcement, PDF multi-page rasterization via pdf.js, independent annotation layer) — ready for Phase 6.4 (Landing page), followed by Phase 6.5 (deploy). Phases 7/8 remain paused.`
+`Phase 6.4 completed (Marketing Landing Page built to DESIGN.md & PRODUCT.md specifications, pop-art paper/ink/marker aesthetic, Space Grotesk typography, tilted sticky notes, ticket-stub pricing cards, and invite route bypass verified) — ready for Phase 6.5 (deployment to Vercel + Railway/Render). Phases 7/8 remain paused.`
 
 ## Environment status
 
@@ -92,21 +92,41 @@ discrepancies" during a routine update) — don't repeat that.
   - **Canvas-Anchored Upload Action**:
     - Floating upload button anchored to bottom-left corner per `DESIGN.md` (no disruptive separate modals).
     - Status spinner with real-time progress text (rendering PDF pages, uploading) and feedback toast.
+- **Phase 6.4 — Marketing Landing Page & Routing**:
+  - Built full marketing landing page at `/` route matching `/docs/DESIGN.md` and `/docs/PRODUCT.md` specifications.
+  - Implemented pop-art paper/ink/marker visual identity:
+    - Custom color tokens: `--paper` (`#F7F5EF`), `--ink` (`#15162B`), `--blue` (`#3355FF`), `--yellow` (`#FFDD33`), `--coral` (`#FF5B4C`), `--mint` (`#2FE69C`), and soft paper tints.
+    - Typography: Google Font `Space Grotesk` (weights 500, 700, 800) for headlines/display and `Inter` for body copy.
+    - Hard offset shadows: `4px 4px 0 #15162B` / `2px 2px 0 #15162B` with crisp 2px ink borders and hard hover translations.
+  - All 6 sections implemented in spec order:
+    1. **Nav**: Logo mark + wordmark, section anchor links (For teams, Features, Pricing), user profile / log in action, "Start a room" primary CTA.
+    2. **Hero (55/45 split)**: Oversized display headline *"Say it. Sketch it. Together."* with curved highlighter stroke mark behind *"Together."*, audience chip selector (`All personas`, `Founders & startups`, `Distributed teams`, `Study groups & tutors`), "Start a room — free" primary CTA, "I have a room code" secondary action, and tilted whiteboard preview card with real doodles, live cursor tags, and voice indicators.
+    3. **Quiet "Who it's for" strip**: Clean plain-text persona breakdown without distraction.
+    4. **Feature sticky notes**: Three tilted sticky notes (`-3deg` yellow, `+2deg` blue, `-1.5deg` coral) with solid ink pushpins, covers: Freehand whiteboard, Realtime voice, and Zero-friction guest links & forkable boards.
+    5. **Ticket-stub pricing cards**: Three perforated stub cards with cut-out semi-circle notches and 2px dashed dividers: Free ($0 forever), Day Pass ($3 / 24 hrs with bold blue accent band and raised elevation), and Monthly Pro ($9 / mo).
+    6. **Footer CTA**: Hard-shadowed blue container *"Ready to study together?"* with dual action buttons and complete footer links.
+  - **Routing integrity**:
+    - `/` displays the marketing landing page for new/uninvited visitors.
+    - `/room/:inviteCode` and `/?join=:code` **bypass the landing page entirely**, immediately opening the dedicated join screen.
+    - "Start a room" triggers auth and room creation flow; "Join with code" opens the join modal.
+    - Updated `CreateRoomModal.tsx` and `RoomView.tsx` to generate canonical `/room/:inviteCode` links.
 
 ## Currently in progress
 
-*(none — Phase 6 is completed and verified; both client and server build cleanly with zero errors)*
+*(none — Phase 6.4 is completed, built with zero TypeScript/Vite errors, and verified via browser subagent)*
 
-## Files touched this session (Phase 6)
+## Files touched this session (Phase 6.4)
 
-- `server/src/services/storage.ts` — Created storage service handling Supabase bucket operations, entitlement size checks, and public URL generation.
-- `server/src/routes/rooms.ts` — Added `POST /api/rooms/:id/files` and `GET /api/rooms/:id/files` with 10MB limit enforcement.
-- `server/src/middleware/auth.ts` — Optimized mock dev-user token checking.
-- `client/src/lib/api.ts` — Added `uploadRoomFile` and `fetchRoomFiles` client methods.
-- `client/src/lib/pdf-renderer.ts` — Built PDF multi-page rasterization engine using `pdfjs-dist`.
-- `client/src/components/whiteboard/WhiteboardCanvas.tsx` — Integrated file upload picker, PDF/image placement on canvas, annotation visibility toggle, and bottom corner controls.
-- `client/src/index.css` — Added `.sb-hide-annotations` CSS rules for instant local annotation layer visibility toggling.
-- `docs/PROJECT_STATUS.md` — Updated with Phase 6 completion notes.
+- `client/index.html` — Added Google Fonts link for `Space Grotesk:wght@500;700;800`.
+- `client/tailwind.config.js` — Extended theme with landing page color palette (`paper`, `ink`, `blue`, `yellow`, `coral`, tints, `graphite`), `fontFamily.display`, and hard shadow utilities.
+- `client/src/index.css` — Defined CSS root variables and utility classes for hard shadows and display typography.
+- `client/src/pages/LandingPage.tsx` — Created the complete 6-section landing page component.
+- `client/src/pages/index.ts` — Exported `LandingPage`.
+- `client/src/components/room/JoinRoomModal.tsx` — Added `isStandalone` mode for clean direct `/room/:inviteCode` bypass layout and enhanced URL parsing.
+- `client/src/components/room/CreateRoomModal.tsx` — Updated generated room invite links to canonical `/room/:inviteCode`.
+- `client/src/components/room/RoomView.tsx` — Updated shareable room invite links to canonical `/room/:inviteCode`.
+- `client/src/App.tsx` — Replaced Phase 1 diagnostic view with `LandingPage` at `/`, wired CTA callbacks into auth and room creation modals, and implemented instant bypass routing for `/room/:inviteCode`.
+- `docs/PROJECT_STATUS.md` — Updated with Phase 6.4 completion details.
 
 ## Known issues / things to revisit
 
@@ -115,10 +135,10 @@ discrepancies" during a routine update) — don't repeat that.
 ## Decisions / discrepancies to be aware of
 
 - The actual project folder on disk is named `studyboard`, not `studysync`.
-- **Roadmap order**: Phases 7 and 8 (Stripe billing, grace-period pause flow) are intentionally paused. Up next: **Phase 6.4 (build the landing page)**, then **Phase 6.5 (deploy to Vercel + Railway/Render)**. Do not resume Phase 7/8 without explicit go-ahead.
+- **Roadmap order**: Phases 7 and 8 (Stripe billing, grace-period pause flow) are intentionally paused. Up next: **Phase 6.5 (deploy to Vercel + Railway/Render)**. Do not resume Phase 7/8 without explicit go-ahead.
 
 ## Next session should start with
 
-**Proceed to Phase 6.4 (Landing Page)** per `DESIGN.md`'s landing page spec and `BUILD_PROMPTS.md`.
-After Phase 6.4: Phase 6.5 (deployment to Vercel + Railway/Render).
+**Proceed to Phase 6.5 (Deployment to Vercel + Railway/Render)** per `BUILD_PROMPTS.md`.
+
 

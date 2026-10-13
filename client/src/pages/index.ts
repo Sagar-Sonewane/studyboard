@@ -1,2 +1,1 @@
-// Pages placeholder (Join, Room, NotFound)
-export {};
+export { LandingPage } from './LandingPage';
