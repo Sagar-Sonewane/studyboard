@@ -43,7 +43,7 @@ export default {
           DEFAULT: '#FF5B4C',
           tint: '#FFDAD5',
         },
-        graphite: '#6B6D7A',
+        graphite: '#444654',
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],

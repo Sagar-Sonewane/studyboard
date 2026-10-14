@@ -1,0 +1,104 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@500;600&amp;family=Space+Grotesk:wght@700;800&amp;display=swap');
+      .title { font-family: 'Space Grotesk', sans-serif; font-weight: 800; font-size: 76px; fill: #15162B; letter-spacing: -2px; }
+      .subhead { font-family: 'Inter', sans-serif; font-weight: 500; font-size: 26px; fill: #444654; }
+      .badge { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 18px; fill: #15162B; }
+      .chip { font-family: 'Inter', sans-serif; font-weight: 600; font-size: 16px; fill: #15162B; }
+      .card-title { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 22px; fill: #15162B; }
+    </style>
+    <pattern id="grid" width="24" height="24" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="1.5" fill="#15162B" opacity="0.12"/>
+    </pattern>
+  </defs>
+
+  <!-- Background Paper -->
+  <rect width="1200" height="630" fill="#F7F5EF"/>
+  <rect width="1200" height="630" fill="url(#grid)"/>
+
+  <!-- Outer Border -->
+  <rect x="20" y="20" width="1160" height="590" rx="16" fill="none" stroke="#15162B" stroke-width="4"/>
+
+  <!-- Left: Brand + Copy -->
+  <!-- Eyebrow Badge -->
+  <g transform="translate(80, 85)">
+    <rect x="0" y="0" width="310" height="42" rx="21" fill="#DCE3FF" stroke="#15162B" stroke-width="2.5"/>
+    <text x="32" y="27" class="badge">FOR TEAMS, FOUNDERS &amp; STUDY</text>
+  </g>
+
+  <!-- Main Headline with Highlighter on Together -->
+  <text x="80" y="210" class="title">Say it.</text>
+  <text x="80" y="295" class="title">Sketch it.</text>
+  
+  <!-- Highlighter mark -->
+  <g transform="translate(80, 315)">
+    <rect x="-4" y="38" width="340" height="40" fill="#FFDD33" transform="skewX(-8) rotate(-1)" rx="4"/>
+    <text x="0" y="65" class="title">Together.</text>
+  </g>
+
+  <!-- Subhead -->
+  <text x="80" y="440" class="subhead">Live voice chat and an infinite shared whiteboard in one room.</text>
+  <text x="80" y="475" class="subhead">No second tab, no separate call links, zero setup.</text>
+
+  <!-- Chips -->
+  <g transform="translate(80, 520)">
+    <rect x="0" y="0" width="130" height="40" rx="20" fill="#FFFFFF" stroke="#15162B" stroke-width="2"/>
+    <text x="24" y="25" class="chip">🚀 startups</text>
+
+    <rect x="145" y="0" width="160" height="40" rx="20" fill="#FFFFFF" stroke="#15162B" stroke-width="2"/>
+    <text x="169" y="25" class="chip">💼 remote teams</text>
+
+    <rect x="320" y="0" width="150" height="40" rx="20" fill="#FFFFFF" stroke="#15162B" stroke-width="2"/>
+    <text x="344" y="25" class="chip">📚 study groups</text>
+  </g>
+
+  <!-- Right: Tilted Preview Card -->
+  <g transform="translate(730, 95) rotate(2)">
+    <!-- Hard shadow -->
+    <rect x="10" y="10" width="390" height="440" rx="16" fill="#15162B"/>
+    <!-- Card body -->
+    <rect x="0" y="0" width="390" height="440" rx="16" fill="#FFFFFF" stroke="#15162B" stroke-width="3"/>
+    
+    <!-- Top bar -->
+    <rect x="0" y="0" width="390" height="44" rx="16" fill="#F7F5EF"/>
+    <line x1="0" y1="44" x2="390" y2="44" stroke="#15162B" stroke-width="2"/>
+    <circle cx="24" cy="22" r="5" fill="#FF5B4C" stroke="#15162B" stroke-width="1.5"/>
+    <circle cx="40" cy="22" r="5" fill="#FFDD33" stroke="#15162B" stroke-width="1.5"/>
+    <circle cx="56" cy="22" r="5" fill="#2FE69C" stroke="#15162B" stroke-width="1.5"/>
+    <text x="75" y="26" font-family="'Inter', sans-serif" font-weight="600" font-size="12" fill="#15162B">sprint-planning · room</text>
+
+    <!-- Canvas area -->
+    <g transform="translate(25, 70)">
+      <!-- Node 1 -->
+      <rect x="4" y="4" width="100" height="44" rx="8" fill="#15162B"/>
+      <rect x="0" y="0" width="100" height="44" rx="8" fill="#FFFFFF" stroke="#15162B" stroke-width="2"/>
+      <text x="16" y="28" font-family="'Space Grotesk', sans-serif" font-weight="700" font-size="14" fill="#15162B">User Auth</text>
+
+      <!-- Flow Arrow -->
+      <path d="M 110 22 C 160 5, 180 40, 230 22" fill="none" stroke="#3355FF" stroke-width="3" stroke-dasharray="5 5"/>
+      <polygon points="230,17 240,22 230,27" fill="#3355FF"/>
+
+      <!-- Node 2 -->
+      <rect x="234" y="4" width="105" height="44" rx="8" fill="#15162B"/>
+      <rect x="230" y="0" width="105" height="44" rx="8" fill="#DCE3FF" stroke="#15162B" stroke-width="2"/>
+      <text x="246" y="28" font-family="'Space Grotesk', sans-serif" font-weight="700" font-size="14" fill="#15162B">API Router</text>
+
+      <!-- Sticky note inside preview -->
+      <g transform="translate(90, 120) rotate(-3)">
+        <rect x="4" y="4" width="170" height="130" rx="8" fill="#15162B"/>
+        <rect x="0" y="0" width="170" height="130" rx="8" fill="#FFF3C2" stroke="#15162B" stroke-width="2"/>
+        <circle cx="85" cy="14" r="5" fill="#15162B"/>
+        <text x="20" y="45" font-family="'Space Grotesk', sans-serif" font-weight="700" font-size="16" fill="#15162B">Launch checklist 📌</text>
+        <text x="20" y="75" font-family="'Inter', sans-serif" font-weight="500" font-size="13" fill="#444654">• Voice connected</text>
+        <text x="20" y="98" font-family="'Inter', sans-serif" font-weight="500" font-size="13" fill="#444654">• Infinite canvas</text>
+      </g>
+    </g>
+
+    <!-- Bottom info -->
+    <line x1="25" y1="390" x2="365" y2="390" stroke="#15162B" stroke-width="1.5" stroke-opacity="0.2"/>
+    <text x="30" y="418" font-family="'Inter', sans-serif" font-weight="600" font-size="13" fill="#15162B">4 in room · voice on</text>
+    <rect x="260" y="402" width="105" height="24" rx="12" fill="#2FE69C" stroke="#15162B" stroke-width="1.5"/>
+    <text x="274" y="418" font-family="'Inter', sans-serif" font-weight="700" font-size="11" fill="#15162B">LIVE ROOM</text>
+  </g>
+</svg>

@@ -15,11 +15,32 @@
   --yellow-tint: #FFF3C2;
   --coral: #FF5B4C;
   --coral-tint: #FFDAD5;
-  --graphite: #6B6D7A;
+  --graphite: #444654; /* darkened from #6B6D7A to guarantee >4.5:1 contrast on #F7F5EF */
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 .font-display {
   font-family: 'Space Grotesk', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* Accessible focus visible rings */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--blue) !important;
+  outline-offset: 2px !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* Landing Page Signature Devices: Hard Offset Shadows */

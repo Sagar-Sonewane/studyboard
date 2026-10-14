@@ -1,84 +1,106 @@
-# StudySync — Realtime Collaboration Platform
+# StudySync — Realtime Voice & Whiteboard Collaboration
 
-> A full-stack realtime collaboration web app combining **voice chat**, an **infinite shared whiteboard**, and **instant friction-free rooms**. Built for study groups, remote teams, and interactive client sessions.
+> **Say it. Sketch it. Together.**  
+> A high-performance realtime collaboration platform combining low-latency voice chat, an infinite shared whiteboard with multi-page PDF markup, and friction-free guest rooms. Built for startups, remote teams, and study groups.
 
-[![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![React](https://img.shields.io/badge/React_18-20232A?style=flat-square&logo=react&logoColor=61DAFB)](https://reactjs.org/)
-[![Vite](https://img.shields.io/badge/Vite-646CFF?style=flat-square&logo=vite&logoColor=white)](https://vitejs.dev/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
-[![Express](https://img.shields.io/badge/Express-000000?style=flat-square&logo=express&logoColor=white)](https://expressjs.com/)
-[![Prisma](https://img.shields.io/badge/Prisma_ORM-2D3748?style=flat-square&logo=prisma&logoColor=white)](https://www.prisma.io/)
-[![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=flat-square&logo=supabase&logoColor=white)](https://supabase.com/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-007ACC?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-18.3-20232A?style=flat-square&logo=react&logoColor=61DAFB)](https://reactjs.org/)
+[![Vite](https://img.shields.io/badge/Vite-6.1-646CFF?style=flat-square&logo=vite&logoColor=white)](https://vitejs.dev/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
+[![Express](https://img.shields.io/badge/Express-4.21-000000?style=flat-square&logo=express&logoColor=white)](https://expressjs.com/)
+[![Prisma](https://img.shields.io/badge/Prisma_ORM-6.3-2D3748?style=flat-square&logo=prisma&logoColor=white)](https://www.prisma.io/)
+[![Supabase](https://img.shields.io/badge/Supabase-Auth_%26_Storage-3ECF8E?style=flat-square&logo=supabase&logoColor=white)](https://supabase.com/)
+[![LiveKit](https://img.shields.io/badge/LiveKit-WebRTC_Voice-002B49?style=flat-square&logo=webrtc&logoColor=white)](https://livekit.io/)
+[![Yjs](https://img.shields.io/badge/Yjs-CRDT_Sync-blueviolet?style=flat-square)](https://github.com/yjs/yjs)
 
 ---
 
 ## 🌟 Key Features
 
-- **Multiplayer Infinite Whiteboard**: Shared canvas with pen, highlighter, shapes, text, eraser, and independent undo/redo stacks.
-- **Realtime Voice Chat**: Integrated WebRTC voice room with participant audio level indicators.
-- **Zero-Friction Guest Joins**: Classmates and collaborators can join via shareable link instantly with just a display name (no account creation required).
-- **Supabase Hybrid Architecture**: Supabase manages Auth, Storage, and hosted PostgreSQL, while Prisma provides a type-safe unified data access layer.
-- **Server-Authoritative Room State**: Room presence, host handoff, grace periods, and board locking are enforced on the backend.
-- **Fork Your Own Board**: Fork any active room canvas into a private workspace without disrupting the shared board.
+- **Infinite Multiplayer Whiteboard**: Powered by `@tldraw/tldraw` engine paired with `Yjs` CRDT state synchronization over binary WebSockets (`/yjs`). Features freehand drawing, highlighters, geometric shapes, sticky notes, text, and independent undo/redo stacks.
+- **Low-Latency Voice Rooms**: Integrated WebRTC voice chat powered by LiveKit Cloud with active speaker detection, mute controls, and a 3-state collapsible participant rail (*Expanded*, *Collapsed*, *Hidden*).
+- **Multi-Page PDF & Image Annotation**: Upload images and multi-page PDFs directly to the canvas. PDFs are rasterized client-side via `pdf.js` into sequential image shapes. Highlighter and pen markings sit on an independent annotation layer that can be toggled or undone without altering the document.
+- **Instant Guest Onboarding (`/room/:code`)**: Invite links bypass marketing pages completely, routing collaborators straight into the session with only a display name (no mandatory account creation or credit card).
+- **Private Board Forking**: Any participant can fork the shared canvas into an isolated private workspace in one click to brainstorm independently before sharing findings with the group.
+- **Collaboration Governance**: Host-controlled draw permissions, viewport synchronization ("follow host" with break-away and one-click return), and 10-color non-colliding cursor attribution.
+- **Signature Marketing Experience (`/`)**: Built to a distinctive pop-art paper/ink aesthetic with Space Grotesk typography, hard offset shadows, tilted sticky notes, and perforated ticket-stub pricing cards.
 
 ---
 
-## 🏗️ Tech Stack & Architecture
+## 🏗️ Architecture & Technology Stack
 
-### **Frontend (`/client`)**
-- **Framework**: React 18 + Vite + TypeScript
-- **Styling**: Tailwind CSS (custom muted neutral palette, hairline 0.5px borders)
-- **Icons**: Lucide React
-- **Auth Client**: `@supabase/supabase-js` for signup, login, and session persistence
+```
+                          ┌───────────────────────────┐
+                          │   Client (React 18 + TS)  │
+                          │   Vite · Tailwind · tldraw│
+                          └─────┬───────────────┬─────┘
+                                │ HTTP/REST     │ WebSockets
+             ┌──────────────────┼───────────────┼──────────────────┐
+             ▼                  ▼               ▼                  ▼
+    ┌────────────────┐  ┌──────────────┐  ┌───────────┐  ┌───────────────────┐
+    │ Supabase Auth  │  │ Express REST │  │ /ws       │  │ /yjs              │
+    │  & Storage     │  │  Backend API │  │ Presence  │  │ Binary CRDT Sync  │
+    └────────────────┘  └───────┬──────┘  └─────┬─────┘  └─────────┬─────────┘
+                                │               │                  │
+                                └───► Prisma ◄──┘                  │
+                                         │                         │
+                                         ▼                         ▼
+                                ┌─────────────────┐       ┌─────────────────┐
+                                │ Supabase PG DB  │       │ LiveKit WebRTC  │
+                                └─────────────────┘       └─────────────────┘
+```
 
-### **Backend (`/server`)**
-- **Runtime**: Node.js + TypeScript (`tsx` for dev, `tsc` for production)
-- **API Framework**: Express.js REST API
-- **Realtime Layer**: `ws` WebSocket server for low-latency presence, messaging, and synchronization
-- **Database & ORM**: Supabase-hosted PostgreSQL queried via Prisma ORM
-- **Auth Verification**: Server-side token verification using Supabase Admin SDK
+| Layer | Technologies | Role |
+|---|---|---|
+| **Frontend** | React 18, Vite, TypeScript, Tailwind CSS, `@tldraw/tldraw`, Lucide Icons | Responsive UI, canvas rendering, LiveKit audio integration |
+| **Realtime Sync** | Yjs, `y-websocket`, native WebSocket (`ws`) | Binary CRDT whiteboard synchronization, participant presence, and awareness |
+| **Audio / Voice** | LiveKit Cloud Client SDK & Server SDK | Scalable WebRTC audio rooms, token generation, active speaker events |
+| **Backend API** | Node.js, Express.js, TypeScript | Room lifecycle management, token verification, file upload limits (10MB) |
+| **Database & ORM** | Supabase PostgreSQL, Prisma ORM | Relational schema (`profiles`, `rooms`, `boards`, `uploaded_files`, `entitlements`) |
+| **Storage & Auth** | Supabase Storage (`room-files`), Supabase Auth | File hosting with service-role security and user authentication |
 
 ---
 
-## 📂 Repository Structure
+## 📂 Monorepo Structure
 
 ```
 studyboard/
-├── client/                     # React + Vite + Tailwind CSS Frontend
+├── client/                     # Vite + React Frontend Application
+│   ├── public/                 # Static assets (favicons, Open Graph images)
 │   ├── src/
 │   │   ├── components/
-│   │   │   ├── auth/           # Supabase Auth modal
-│   │   │   ├── room/           # Create Room, Join Room, Live Room View
-│   │   │   ├── whiteboard/     # Canvas and drawing tools
-│   │   │   ├── participants/   # Participant rail (expanded, collapsed, hidden)
-│   │   │   └── voice/          # WebRTC voice indicators
-│   │   ├── hooks/              # Custom React hooks
-│   │   ├── lib/                # Supabase client, API client, AuthProvider
-│   │   ├── pages/              # App routing and view pages
-│   │   ├── App.tsx             # Main dashboard and studio router
-│   │   └── main.tsx            # Entrypoint
+│   │   │   ├── auth/           # Supabase authentication modal
+│   │   │   ├── participants/   # 3-state voice participant rail
+│   │   │   ├── room/           # Room creation, direct join modal, room view
+│   │   │   └── whiteboard/     # Whiteboard canvas, toolbar, palette flyout
+│   │   ├── config/             # Plan limits, pricing, and landing config
+│   │   ├── hooks/              # LiveKit voice, presence, and Yjs hooks
+│   │   ├── lib/                # API client, PDF renderer, Supabase client
+│   │   ├── pages/              # Landing page, dashboard, and 404 views
+│   │   ├── App.tsx             # Main client router & modal orchestrator
+│   │   └── index.css           # Design tokens, hard shadows, typography
 │   ├── package.json
+│   ├── tailwind.config.js
 │   └── vite.config.ts
-├── server/                     # Node.js + Express + WebSocket Backend
+├── server/                     # Node.js + Express Backend Server
 │   ├── prisma/
-│   │   ├── schema.prisma       # Prisma schema (profiles, rooms, participants, etc.)
-│   │   └── triggers.sql        # Postgres trigger syncing auth.users -> public.profiles
+│   │   ├── schema.prisma       # Data model schema
+│   │   └── triggers.sql        # auth.users to public.profiles sync trigger
 │   ├── src/
-│   │   ├── middleware/         # requireAuth & optionalAuth token verification
+│   │   ├── middleware/         # Supabase JWT authentication middleware
 │   │   ├── routes/             # REST endpoints (/api/health, /api/rooms)
-│   │   ├── services/           # Prisma client, Supabase admin service
-│   │   ├── ws/                 # Realtime WebSocket server handlers
-│   │   └── index.ts            # Server entrypoint
+│   │   ├── services/           # LiveKit token generator, Supabase storage
+│   │   ├── ws/                 # Realtime presence and Yjs sync handlers
+│   │   └── index.ts            # HTTP & WebSocket server entrypoint
 │   ├── package.json
 │   └── tsconfig.json
-├── docs/                       # Project specifications & build prompts
-│   ├── PRODUCT.md
-│   ├── STRUCTURE.md
-│   ├── DATA_MODEL.md
-│   ├── API_CONTRACT.md
-│   ├── DESIGN.md
-│   └── BUILD_PROMPTS.md
-├── package.json                # Monorepo workspaces configuration
+├── docs/                       # Architectural specs and roadmap documentation
+│   ├── PRODUCT.md              # Product specifications and tier definitions
+│   ├── DESIGN.md               # Design system & landing page specifications
+│   ├── STRUCTURE.md            # Technical architecture and hybrid model
+│   ├── DATA_MODEL.md           # Database tables and relationship schemas
+│   └── PROJECT_STATUS.md       # Incremental phase progress tracking
+├── package.json                # Workspaces root configuration
 └── README.md
 ```
 
@@ -87,11 +109,12 @@ studyboard/
 ## 🚀 Getting Started
 
 ### 1. Prerequisites
-- **Node.js**: v18.0.0 or later (v20+ recommended)
-- **npm**: v9.0.0 or later
-- **Supabase Account**: A Supabase project for Auth, Storage, and PostgreSQL
+- **Node.js**: `v18.0.0` or later (`v20+` recommended)
+- **npm**: `v9.0.0` or later
+- **Supabase Account**: A Supabase project with PostgreSQL, Auth, and Storage enabled.
+- **LiveKit Cloud Account**: Free LiveKit Cloud project for WebRTC voice credentials.
 
-### 2. Clone & Install Dependencies
+### 2. Clone Repository & Install Dependencies
 
 ```bash
 git clone https://github.com/Sagar-Sonewane/studyboard.git
@@ -99,75 +122,101 @@ cd studyboard
 npm install
 ```
 
-### 3. Configure Environment Variables
+### 3. Environment Configuration
 
-Create `.env` at the root (or configure `client/.env` and `server/.env`):
+Create `.env` at the project root (or configure `client/.env` and `server/.env`):
 
-```bash
-# Supabase Configuration
-SUPABASE_URL="https://[YOUR-PROJECT-REF].supabase.co"
-SUPABASE_ANON_KEY="your-supabase-anon-key"
-SUPABASE_SERVICE_ROLE_KEY="your-supabase-service-role-key"
-
-# Postgres Connection String (used by Prisma)
-DATABASE_URL="postgresql://postgres:[YOUR-PASSWORD]@db.[YOUR-PROJECT-REF].supabase.co:5432/postgres?sslmode=require"
-
-# Client Vite Configuration
-VITE_SUPABASE_URL="https://[YOUR-PROJECT-REF].supabase.co"
-VITE_SUPABASE_ANON_KEY="your-supabase-anon-key"
-VITE_API_URL="http://localhost:4000"
-VITE_WS_URL="ws://localhost:4000"
-
-# Server Configuration
+```env
+# ==========================================
+# Backend & Database Configuration
+# ==========================================
 PORT=4000
 NODE_ENV="development"
 CORS_ORIGIN="http://localhost:5173"
+
+# Supabase Credentials
+SUPABASE_URL="https://[YOUR-PROJECT-ID].supabase.co"
+SUPABASE_ANON_KEY="your-supabase-anon-key"
+SUPABASE_SERVICE_ROLE_KEY="your-supabase-service-role-key"
+
+# Prisma PostgreSQL Connection String
+DATABASE_URL="postgresql://postgres:[YOUR-PASSWORD]@db.[YOUR-PROJECT-ID].supabase.co:5432/postgres?sslmode=require"
+
+# LiveKit Voice Credentials
+LIVEKIT_URL="wss://[YOUR-PROJECT].livekit.cloud"
+LIVEKIT_API_KEY="your-livekit-api-key"
+LIVEKIT_API_SECRET="your-livekit-api-secret"
+
+# ==========================================
+# Client (Vite) Configuration
+# ==========================================
+VITE_SUPABASE_URL="https://[YOUR-PROJECT-ID].supabase.co"
+VITE_SUPABASE_ANON_KEY="your-supabase-anon-key"
+VITE_API_URL="http://localhost:4000"
+VITE_WS_URL="ws://localhost:4000"
 ```
 
-### 4. Setup Database & Prisma
+### 4. Database Setup & Storage Bucket
 
-Generate the Prisma client:
-```bash
-npm run prisma:generate
-```
+1. **Generate Prisma Client**:
+   ```bash
+   npm run prisma:generate
+   ```
 
-Execute the SQL trigger in `server/prisma/triggers.sql` inside your Supabase SQL Editor to automatically mirror newly registered users to `public.profiles`.
+2. **Sync Database Schema**:
+   ```bash
+   cd server
+   npx prisma db push
+   cd ..
+   ```
+
+3. **Supabase Auth Trigger**:
+   Execute [`server/prisma/triggers.sql`](file:///d:/sagar/studyboard/server/prisma/triggers.sql) in your Supabase SQL Editor to automatically mirror newly registered `auth.users` to `public.profiles`.
+
+4. **Storage Bucket**:
+   Create a public bucket named `room-files` in your Supabase dashboard to allow whiteboard file uploads.
 
 ### 5. Run Development Servers
 
-Start both the backend server and frontend client concurrently:
+Run both the Vite frontend client and Express + WebSocket backend concurrently:
+
 ```bash
 npm run dev
 ```
 
-- **Frontend**: [http://localhost:5173](http://localhost:5173)
+- **Frontend App**: [http://localhost:5173](http://localhost:5173)
 - **Backend API**: [http://localhost:4000/api/health](http://localhost:4000/api/health)
-- **WebSocket Endpoint**: `ws://localhost:4000/ws`
+- **Presence WebSocket**: `ws://localhost:4000/ws`
+- **Yjs Whiteboard WebSocket**: `ws://localhost:4000/yjs`
 
 ---
 
-## 📡 REST API & WebSocket Contract
+## 📡 API & WebSocket Reference
 
 ### REST Endpoints
-| Method | Endpoint | Description | Auth Required |
-|---|---|---|---|
-| `GET` | `/api/health` | Service health, DB connectivity, uptime | No |
-| `POST` | `/api/rooms` | Create a new room with shareable invite code | Yes (`Bearer <token>`) |
-| `GET` | `/api/rooms/:inviteCode` | Resolve invite code to room metadata | No |
-| `POST` | `/api/rooms/:id/join` | Join session as authenticated user or guest | Optional |
 
-### WebSocket Events
-- `connection:established`: Diagnostic server welcome
-- `ping` / `pong`: Low-latency round-trip health check
-- `presence:join` / `presence:leave`: Realtime room presence broadcast
-- `room:grace_period_started` / `room:resumed`: Server-authoritative lock management
+| Method | Endpoint | Description | Auth |
+|---|---|---|---|
+| `GET` | `/api/health` | Service status, database latency & uptime | Public |
+| `POST` | `/api/rooms` | Create a room and generate a 6-character code | Bearer Token |
+| `GET` | `/api/rooms/:inviteCode` | Resolve invite code to room details | Public |
+| `POST` | `/api/rooms/:id/join` | Join room (guest or authenticated user) | Optional |
+| `POST` | `/api/rooms/:id/token` | Generate scoped LiveKit WebRTC audio token | Participant |
+| `POST` | `/api/rooms/:id/files` | Upload and attach image/PDF (10MB limit) | Participant |
+| `GET` | `/api/rooms/:id/files` | Retrieve files attached to the room | Participant |
+| `POST` | `/api/rooms/:id/boards/fork` | Clone shared whiteboard into a private board | Participant |
+
+### Realtime Channels
+
+- **Presence (`/ws`)**: Handles peer joined/left announcements, active speaker indicators, dynamic draw permission requests, and viewport sync messages.
+- **Whiteboard Sync (`/yjs`)**: Streams binary Yjs update transactions and awareness states to keep canvas strokes, shapes, and asset metadata synchronized across all participants.
 
 ---
 
-## 🛠️ Build Scripts
+## 🛠️ Build & Verification Scripts
 
 ```bash
-# Run both frontend and backend concurrently
+# Run both workspaces concurrently
 npm run dev
 
 # Run backend only
@@ -176,10 +225,10 @@ npm run dev:server
 # Run frontend only
 npm run dev:client
 
-# Typecheck and build production bundles for both workspaces
+# Typecheck and produce production bundles
 npm run build
 
-# Generate Prisma Client
+# Generate Prisma client artifacts
 npm run prisma:generate
 ```
 

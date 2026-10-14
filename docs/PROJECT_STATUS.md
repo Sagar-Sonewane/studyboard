@@ -110,23 +110,35 @@ discrepancies" during a routine update) — don't repeat that.
     - `/room/:inviteCode` and `/?join=:code` **bypass the landing page entirely**, immediately opening the dedicated join screen.
     - "Start a room" triggers auth and room creation flow; "Join with code" opens the join modal.
     - Updated `CreateRoomModal.tsx` and `RoomView.tsx` to generate canonical `/room/:inviteCode` links.
+- **Phase 6.4 — Polish Pass**:
+  - **Content & Trust**: Removed all developer jargon ("Yjs", "CRDT", "WebRTC", "LiveKit", "pdf.js", "binary sync", "rasterizer") across all copy and the hero preview card. Replaced tech footnotes with benefit tags ("no separate call link", "your own private copy", "highlight anything").
+  - **Plausible Hero Preview**: Added work/study-plausible sticky notes ("Launch checklist 📌", "User Auth", "API Gateway", "Shared Board") with text ≥ 12px. Replaced "0 latency" with "4 in room · voice on". Relocated "forked by you" tag to bottom-left corner with `-rotate-[4deg]` so it never collides with top voice pill.
+  - **Honest Positioning & Config**: Changed "used by:" to "built for:" with Lucide SVG icons (`Rocket`, `Briefcase`, `BookOpen`). Created `client/src/config/landing.ts` containing `PLAN_LIMITS` and `FEEDBACK_URL` with TODO comments for future Stripe launch. Paid tiers ("Day Pass", "Monthly Pro") set to muted non-clickable "Coming soon" (`aria-disabled="true"`).
+  - **Hero Subhead**: Tightened to 2 lines (~25 words) covering voice + whiteboard for both work and study.
+  - **Layout & 1200px Unified Container**: All sections (Nav, Hero, Strip, Features, Pricing, Footer CTA, Footer) share a single `max-w-[1200px]` centered container with matching horizontal padding. Nav heightened to 72px with paper bg and 1px ink border. Nav links smooth-scroll to anchors.
+  - **Pricing Alignment**: Equal-height cards (`items-stretch`) with pinned bottom CTA buttons and uniform `#3355FF` checkmarks.
+  - **Button Hierarchy**: "Create a room" keeps the hard shadow; "Join with link / code" is an outline button with no shadow.
+  - **Typography & Accessibility**: Monospace restricted strictly to uppercase eyebrow labels and tiny tags (min 12px, letter-spaced). Body copy in `Inter` (min 14px, paragraphs 16px, max ~65ch wide). Darkened graphite to `#444654` for > 4.5:1 WCAG AA contrast. Full semantic landmarks, focus rings, and prefers-reduced-motion support.
+  - **Pre-deploy SEO & Assets**: Created SVG favicon (`/favicon.svg`), 1200x630 Open Graph preview SVG (`/og-image.svg`), Open Graph and Twitter Card meta tags in `index.html`. Added Privacy, Terms, and Contact modals plus configurable "Send feedback" link and "© 2026 StudySync".
+  - **Branded 404**: Unknown routes render a branded paper/ink 404 screen with a link home.
+  - **Visual Verification**: Verified across 1920px desktop and 375px mobile viewports with zero horizontal scroll, functioning mobile menu, and confirmed route bypass for `/room/:code`.
 
 ## Currently in progress
 
-*(none — Phase 6.4 is completed, built with zero TypeScript/Vite errors, and verified via browser subagent)*
+*(none — Phase 6.4 polish pass completed, verified across 1920px/375px viewports, builds cleanly with zero errors)*
 
-## Files touched this session (Phase 6.4)
+## Files touched this session (Phase 6.4 Polish Pass)
 
-- `client/index.html` — Added Google Fonts link for `Space Grotesk:wght@500;700;800`.
-- `client/tailwind.config.js` — Extended theme with landing page color palette (`paper`, `ink`, `blue`, `yellow`, `coral`, tints, `graphite`), `fontFamily.display`, and hard shadow utilities.
-- `client/src/index.css` — Defined CSS root variables and utility classes for hard shadows and display typography.
-- `client/src/pages/LandingPage.tsx` — Created the complete 6-section landing page component.
-- `client/src/pages/index.ts` — Exported `LandingPage`.
-- `client/src/components/room/JoinRoomModal.tsx` — Added `isStandalone` mode for clean direct `/room/:inviteCode` bypass layout and enhanced URL parsing.
-- `client/src/components/room/CreateRoomModal.tsx` — Updated generated room invite links to canonical `/room/:inviteCode`.
-- `client/src/components/room/RoomView.tsx` — Updated shareable room invite links to canonical `/room/:inviteCode`.
-- `client/src/App.tsx` — Replaced Phase 1 diagnostic view with `LandingPage` at `/`, wired CTA callbacks into auth and room creation modals, and implemented instant bypass routing for `/room/:inviteCode`.
-- `docs/PROJECT_STATUS.md` — Updated with Phase 6.4 completion details.
+- `client/src/config/landing.ts` — Created configuration for `PLAN_LIMITS` and `FEEDBACK_URL`.
+- `client/src/pages/LandingPage.tsx` — Complete polish pass (layout, typography, copy, preview card, 1200px container, modals).
+- `client/src/App.tsx` — Added branded 404 screen for unknown routes and wired join modal callbacks.
+- `client/src/index.css` — Added smooth-scrolling, WCAG focus-visible rings, prefers-reduced-motion, and darkened graphite token.
+- `client/tailwind.config.js` — Darkened `graphite` to `#444654`.
+- `client/index.html` — Added SEO title, meta descriptions, Open Graph & Twitter card metadata, favicon reference.
+- `client/public/favicon.svg` — Branded SVG favicon in paper/ink style.
+- `client/public/og-image.svg` — 1200x630 Open Graph image in paper/ink style.
+- `docs/DESIGN.md` — Updated landing page spec section to reflect 1200px container, mono rules, Coming soon state, and footer links.
+- `docs/PROJECT_STATUS.md` — Logged Phase 6.4 polish pass.
 
 ## Known issues / things to revisit
 

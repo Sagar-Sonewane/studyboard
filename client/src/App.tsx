@@ -126,7 +126,59 @@ function AppContent() {
     );
   }
 
-  // 3. Otherwise, render the marketing landing page at /
+  // 3. Check for unknown routes -> branded 404 screen
+  const currentPath = window.location.pathname;
+  const isKnownRoute =
+    currentPath === '/' ||
+    currentPath.startsWith('/room/') ||
+    currentPath === '/app' ||
+    currentPath === '/dashboard';
+
+  if (!isKnownRoute) {
+    return (
+      <div className="min-h-screen bg-[#F7F5EF] text-[#15162B] flex flex-col items-center justify-center p-6 text-center">
+        <a href="/" className="flex items-center gap-2 mb-8">
+          <div className="w-9 h-9 rounded-lg bg-[#3355FF] border-2 border-[#15162B] hard-shadow-sm flex items-center justify-center text-white">
+            <svg
+              className="w-5 h-5"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <circle cx="12" cy="12" r="9" className="opacity-30" />
+              <path d="m9 12 2 2 4-4" />
+            </svg>
+          </div>
+          <span className="font-display font-bold text-2xl text-[#15162B]">
+            StudySync
+          </span>
+        </a>
+
+        <div className="bg-white border-2 border-[#15162B] hard-shadow-lg rounded-2xl p-8 max-w-md w-full">
+          <span className="px-3 py-1 rounded-full bg-[#FFE3E0] border-2 border-[#15162B] text-xs font-mono font-bold text-[#FF5B4C] uppercase tracking-wider inline-block mb-4">
+            404 Error
+          </span>
+          <h1 className="font-display font-extrabold text-3xl text-[#15162B] mb-2">
+            Page not found
+          </h1>
+          <p className="text-sm text-[#444654] mb-6 leading-relaxed">
+            The study room or page you're looking for doesn't exist or has moved.
+          </p>
+          <a
+            href="/"
+            className="w-full py-3 bg-[#3355FF] text-white font-display font-bold text-sm rounded-xl border-2 border-[#15162B] hard-shadow hard-shadow-hover inline-flex items-center justify-center gap-2"
+          >
+            <span>Back to home</span>
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  // 4. Otherwise, render the marketing landing page at /
   return (
     <>
       <LandingPage

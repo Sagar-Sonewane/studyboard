@@ -247,8 +247,14 @@ it to this spec exactly, don't freelance a new visual direction.
    noise — this section stays quiet since the hero already spent the
    visual energy.
 
-### Copy rules specific to this page
+### Copy & typography rules specific to this page
 
+- **Container width**: all sections (nav, hero, strip, features, pricing, footer CTA, footer) share a single `max-width: 1200px` centered container with consistent padding (`px-4 sm:px-6 md:px-8`) and section padding (`py-16 md:py-24`).
+- **Typography usage**: Monospace is reserved strictly for short uppercase eyebrow labels and tiny tags (min 12px, letter-spaced). All body text, descriptions, helper lines, and price units use the sans body font (`Inter`).
+- **Contrast**: Body text and secondary copy use `#444654` (darkened from `#6B6D7A`) to guarantee WCAG AA > 4.5:1 contrast against the `#F7F5EF` cream paper background.
+- **Button hierarchy**: "Create a room →" keeps the signature hard shadow; "Join with link / code" is an outline button with no shadow.
+- **Paid tiers status**: Because Stripe billing is paused (Phases 7/8), Day Pass ($3) and Monthly Pro ($9) buttons render in a muted, non-clickable "Coming soon" state (`aria-disabled="true"`). "Start free" remains active.
+- **Footer essentials**: Includes Privacy, Terms, Contact modals, configurable "Send feedback" link (`FEEDBACK_URL`), and "© 2026 StudySync".
 - Audience-neutral by default — don't write a page that reads as
   exclusively for students or exclusively for professionals. The chip row
   is how people self-identify, not separate hero variants.
