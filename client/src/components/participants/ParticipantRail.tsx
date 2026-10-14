@@ -93,7 +93,7 @@ export const ParticipantRail: React.FC<ParticipantRailProps> = ({
       <div className="absolute top-3 left-3 z-30 animate-in fade-in zoom-in-95 duration-150">
         <button
           onClick={() => setRailState('expanded')}
-          className="flex items-center gap-2 px-3 py-1.5 bg-white/95 backdrop-blur-sm border hairline-border rounded-full shadow-xs hover:bg-neutral-50 transition-colors group cursor-pointer"
+          className="flex items-center gap-2 px-3.5 py-1.5 bg-[#FAF8F3] border-2 border-[#15162B] hard-shadow-xs rounded-full hover:bg-white transition-all group cursor-pointer"
           title="Show participant list"
         >
           <div className="flex -space-x-2 overflow-hidden">
@@ -102,9 +102,9 @@ export const ParticipantRail: React.FC<ParticipantRailProps> = ({
               return (
                 <div
                   key={p.participantId}
-                  style={{ backgroundColor: p.color || '#4f46e5' }}
-                  className={`inline-block h-5 w-5 rounded-full ring-2 ring-white flex items-center justify-center text-[9px] font-semibold text-white ${
-                    speaking ? 'ring-emerald-400 ring-offset-0 animate-pulse' : ''
+                  style={{ backgroundColor: p.color || '#3355FF' }}
+                  className={`inline-block h-6 w-6 rounded-full ring-2 ring-white border border-[#15162B] flex items-center justify-center text-[10px] font-bold text-white ${
+                    speaking ? 'ring-[#00AA72] animate-pulse' : ''
                   }`}
                 >
                   {p.displayName.slice(0, 1).toUpperCase()}
@@ -113,11 +113,11 @@ export const ParticipantRail: React.FC<ParticipantRailProps> = ({
             })}
           </div>
 
-          <span className="text-xs font-medium text-neutral-700">
+          <span className="text-xs font-display font-bold text-[#15162B]">
             {participants.length} {participants.length === 1 ? 'person' : 'people'}
           </span>
 
-          <Maximize2 className="w-3.5 h-3.5 text-neutral-400 group-hover:text-neutral-700 transition-colors" />
+          <Maximize2 className="w-3.5 h-3.5 text-[#3355FF] group-hover:scale-110 transition-transform" />
         </button>
       </div>
     );
@@ -126,13 +126,13 @@ export const ParticipantRail: React.FC<ParticipantRailProps> = ({
   // State 2: Collapsed vertical strip (avatars only)
   if (railState === 'collapsed') {
     return (
-      <aside className="w-14 border-r hairline-border bg-white flex flex-col justify-between shrink-0 transition-all duration-200 z-20 select-none">
+      <aside className="w-16 border-r-2 border-[#15162B] bg-[#FAF8F3] flex flex-col justify-between shrink-0 transition-all duration-200 z-20 select-none">
         {/* Top toggle */}
         <div>
-          <div className="p-2 border-b hairline-border flex justify-center">
+          <div className="p-2.5 border-b-2 border-[#15162B] flex justify-center bg-[#FAF8F3]">
             <button
               onClick={() => setRailState('expanded')}
-              className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-800 hover:bg-neutral-100 transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg text-[#15162B] bg-white border border-[#15162B] hover:bg-[#F2EFE6] transition-colors cursor-pointer"
               title="Expand participant list"
             >
               <ChevronRight className="w-4 h-4" />
@@ -149,38 +149,38 @@ export const ParticipantRail: React.FC<ParticipantRailProps> = ({
               return (
                 <div key={p.participantId} className="relative group flex justify-center">
                   <div
-                    style={{ backgroundColor: p.color || '#4f46e5' }}
-                    className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold text-white relative ${
-                      speaking ? 'ring-2 ring-emerald-500 ring-offset-1 animate-pulse' : ''
+                    style={{ backgroundColor: p.color || '#3355FF' }}
+                    className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white relative border-2 border-[#15162B] ${
+                      speaking ? 'ring-2 ring-[#00AA72] ring-offset-1 animate-pulse' : ''
                     }`}
                   >
                     {p.displayName.slice(0, 2).toUpperCase()}
 
                     {p.isHost && (
-                      <div className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-amber-400 flex items-center justify-center text-white shadow-xs">
-                        <Crown className="w-2.5 h-2.5 text-amber-950" />
+                      <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[#FFDD33] border border-[#15162B] flex items-center justify-center text-[#15162B] shadow-xs">
+                        <Crown className="w-2.5 h-2.5 text-[#15162B]" />
                       </div>
                     )}
                   </div>
 
                   {/* Tooltip on hover */}
-                  <div className="absolute left-12 top-1/2 -translate-y-1/2 bg-neutral-900 text-white text-xs px-2.5 py-1.5 rounded-lg shadow-md opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50 flex items-center gap-1.5">
+                  <div className="absolute left-14 top-1/2 -translate-y-1/2 bg-[#15162B] text-white text-xs px-3 py-1.5 rounded-xl border border-white/20 shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50 flex items-center gap-1.5 font-display font-medium">
                     <span>{p.displayName}</span>
-                    {isSelf && <span className="text-neutral-400">(you)</span>}
-                    {p.isHost && <span className="text-amber-300">· host</span>}
-                    <span className="text-neutral-400">·</span>
+                    {isSelf && <span className="text-[#B9BAC7]">(you)</span>}
+                    {p.isHost && <span className="text-[#FFDD33]">· host</span>}
+                    <span className="text-[#B9BAC7]">·</span>
                     {p.canDraw ? (
-                      <span className="text-emerald-300 text-[10px]">can draw</span>
+                      <span className="text-[#00AA72] text-[11px] font-mono">can draw</span>
                     ) : (
-                      <span className="text-neutral-400 text-[10px]">locked</span>
+                      <span className="text-[#B9BAC7] text-[11px] font-mono">locked</span>
                     )}
-                    <span className="text-neutral-400">·</span>
+                    <span className="text-[#B9BAC7]">·</span>
                     {muted ? (
-                      <span className="text-rose-300 text-[10px]">muted</span>
+                      <span className="text-[#FF5B4C] text-[11px] font-mono">muted</span>
                     ) : speaking ? (
-                      <span className="text-emerald-300 text-[10px]">speaking</span>
+                      <span className="text-[#00AA72] text-[11px] font-mono">speaking</span>
                     ) : (
-                      <span className="text-neutral-300 text-[10px]">mic on</span>
+                      <span className="text-[#FFDD33] text-[11px] font-mono">mic on</span>
                     )}
                   </div>
                 </div>
@@ -190,23 +190,23 @@ export const ParticipantRail: React.FC<ParticipantRailProps> = ({
         </div>
 
         {/* Collapsed Call Controls */}
-        <div className="p-2 border-t hairline-border flex flex-col gap-2 items-center">
+        <div className="p-2.5 border-t-2 border-[#15162B] flex flex-col gap-2 items-center bg-[#FAF8F3]">
           <button
             onClick={onToggleMute}
-            className={`p-2 rounded-lg transition-colors cursor-pointer ${
+            className={`p-2 rounded-xl border-2 border-[#15162B] hard-shadow-xs transition-colors cursor-pointer ${
               isMuted
-                ? 'bg-rose-50 text-rose-600 hover:bg-rose-100'
-                : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
+                ? 'bg-[#FFE3E0] text-[#FF5B4C] hover:bg-[#FFDAD5]'
+                : 'bg-white text-[#3355FF] hover:bg-[#F2EFE6]'
             }`}
-            title={isMuted ? 'unmute microphone' : 'mute microphone'}
+            title={isMuted ? 'Unmute microphone' : 'Mute microphone'}
           >
             {isMuted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
           </button>
 
           <button
             onClick={onLeaveRoom}
-            className="p-2 rounded-lg text-neutral-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
-            title="leave room"
+            className="p-2 rounded-xl text-[#15162B] bg-white hover:text-[#FF5B4C] hover:bg-[#FFE3E0] border-2 border-[#15162B] transition-colors cursor-pointer"
+            title="Leave room"
           >
             <LogOut className="w-4 h-4" />
           </button>
@@ -217,37 +217,39 @@ export const ParticipantRail: React.FC<ParticipantRailProps> = ({
 
   // State 1: Expanded (default on first join)
   return (
-    <aside className="w-60 border-r hairline-border bg-neutral-50/50 flex flex-col justify-between shrink-0 transition-all duration-200 z-20 select-none">
+    <aside className="w-64 border-r-2 border-[#15162B] bg-[#FAF8F3] flex flex-col justify-between shrink-0 transition-all duration-200 z-20 select-none font-sans">
       {/* Header with state toggles */}
       <div>
-        <div className="p-3.5 border-b hairline-border bg-white flex items-center justify-between">
+        <div className="p-3.5 border-b-2 border-[#15162B] bg-[#FAF8F3] flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Users className="w-4 h-4 text-neutral-600" />
-            <h2 className="text-xs font-semibold text-neutral-900 tracking-tight">
-              participants ({participants.length})
+            <div className="w-6 h-6 rounded-md bg-[#3355FF] border border-[#15162B] flex items-center justify-center text-white">
+              <Users className="w-3.5 h-3.5" />
+            </div>
+            <h2 className="text-xs font-display font-bold text-[#15162B] tracking-tight uppercase">
+              Participants ({participants.length})
             </h2>
           </div>
 
           <div className="flex items-center gap-1">
             <button
               onClick={() => setRailState('collapsed')}
-              className="p-1 rounded-md text-neutral-400 hover:text-neutral-800 hover:bg-neutral-100 transition-colors cursor-pointer"
-              title="collapse to avatar strip"
+              className="p-1 rounded-md text-[#15162B] bg-white border border-[#15162B] hover:bg-[#F2EFE6] transition-colors cursor-pointer"
+              title="Collapse to avatar strip"
             >
-              <ChevronLeft className="w-4 h-4" />
+              <ChevronLeft className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={() => setRailState('hidden')}
-              className="p-1 rounded-md text-neutral-400 hover:text-neutral-800 hover:bg-neutral-100 transition-colors text-[10px] font-mono px-1 cursor-pointer"
-              title="hide to floating pill"
+              className="px-1.5 py-0.5 rounded-md text-[#15162B] bg-white border border-[#15162B] hover:bg-[#F2EFE6] transition-colors text-[10px] font-mono font-bold cursor-pointer"
+              title="Hide to floating pill"
             >
               hide
             </button>
           </div>
         </div>
 
-        {/* Participant Rows — compact rows per DESIGN.md */}
-        <div className="p-2.5 space-y-1.5 overflow-y-auto max-h-[calc(100vh-230px)]">
+        {/* Participant Rows — compact cards per StudySync design */}
+        <div className="p-2.5 space-y-2 overflow-y-auto max-h-[calc(100vh-230px)]">
           {participants.map((p) => {
             const isSelf = p.participantId === currentParticipantId;
             const speaking = isParticipantSpeaking(p);
@@ -256,32 +258,34 @@ export const ParticipantRail: React.FC<ParticipantRailProps> = ({
             return (
               <div
                 key={p.participantId}
-                className={`p-2 rounded-xl border hairline-border flex items-center justify-between transition-colors ${
-                  isSelf ? 'bg-white shadow-xs' : 'bg-white/80 hover:bg-white'
-                } ${speaking ? 'border-emerald-300' : ''}`}
+                className={`p-2.5 rounded-xl border-2 border-[#15162B] flex items-center justify-between transition-all ${
+                  isSelf
+                    ? 'bg-white hard-shadow-sm'
+                    : 'bg-white/80 hover:bg-white'
+                } ${speaking ? 'ring-2 ring-[#00AA72] ring-offset-1' : ''}`}
               >
                 {/* Left: Avatar & Info */}
                 <div className="flex items-center gap-2.5 min-w-0">
                   <div
-                    style={{ backgroundColor: p.color || '#4f46e5' }}
-                    className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0 relative ${
-                      speaking ? 'ring-2 ring-emerald-500 ring-offset-1 animate-pulse' : ''
+                    style={{ backgroundColor: p.color || '#3355FF' }}
+                    className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold text-white shrink-0 relative border border-[#15162B] ${
+                      speaking ? 'ring-2 ring-[#00AA72] animate-pulse' : ''
                     }`}
                   >
                     {p.displayName.slice(0, 2).toUpperCase()}
                   </div>
 
                   <div className="truncate">
-                    <div className="text-xs font-medium text-neutral-900 truncate flex items-center gap-1">
+                    <div className="text-xs font-display font-bold text-[#15162B] truncate flex items-center gap-1">
                       <span className="truncate">{p.displayName}</span>
                       {isSelf && (
-                        <span className="text-[10px] text-neutral-400 font-normal shrink-0">(you)</span>
+                        <span className="text-[10px] text-[#444654] font-normal shrink-0">(you)</span>
                       )}
                     </div>
-                    <div className="text-[10px] text-neutral-400 flex items-center gap-1">
+                    <div className="text-[10px] font-mono text-[#444654] flex items-center gap-1">
                       {p.isHost ? (
-                        <span className="text-amber-700 font-medium inline-flex items-center gap-0.5">
-                          <Crown className="w-2.5 h-2.5 text-amber-500" /> host
+                        <span className="text-[#15162B] bg-[#FFDD33] px-1 rounded text-[9px] font-bold inline-flex items-center gap-0.5 border border-[#15162B]/30">
+                          <Crown className="w-2.5 h-2.5 text-[#15162B]" /> host
                         </span>
                       ) : p.guestName ? (
                         <span>guest</span>
@@ -306,17 +310,17 @@ export const ParticipantRail: React.FC<ParticipantRailProps> = ({
                         }
                       }}
                       disabled={!isHost}
-                      className={`p-1 rounded-md transition-colors ${
-                        isHost ? 'cursor-pointer hover:bg-neutral-100' : 'cursor-default'
-                      } ${p.canDraw ? 'text-indigo-600' : 'text-neutral-300'}`}
+                      className={`p-1.5 rounded-lg border transition-colors ${
+                        isHost ? 'cursor-pointer hover:bg-neutral-100 border-[#15162B]' : 'cursor-default border-transparent'
+                      } ${p.canDraw ? 'text-[#3355FF] bg-[#E5EDFF]' : 'text-[#8F91A0]'}`}
                       title={
                         p.canDraw
                           ? isHost
-                            ? 'draw permission active (click to revoke)'
-                            : 'draw permission active'
+                            ? 'Draw permission active (click to revoke)'
+                            : 'Draw permission active'
                           : isHost
-                          ? 'drawing locked (click to grant)'
-                          : 'drawing locked'
+                          ? 'Drawing locked (click to grant)'
+                          : 'Drawing locked'
                       }
                     >
                       {p.canDraw ? (
@@ -329,19 +333,19 @@ export const ParticipantRail: React.FC<ParticipantRailProps> = ({
 
                   {/* Mic status icon */}
                   {muted ? (
-                    <div className="p-1 rounded-md text-neutral-400" title="microphone muted">
-                      <MicOff className="w-3.5 h-3.5 text-neutral-400" />
+                    <div className="p-1.5 rounded-lg bg-[#FFE3E0] text-[#FF5B4C] border border-[#FF5B4C]/30" title="Microphone muted">
+                      <MicOff className="w-3.5 h-3.5 text-[#FF5B4C]" />
                     </div>
                   ) : speaking ? (
                     <div
-                      className="p-1 rounded-md text-emerald-600 animate-pulse bg-emerald-50"
-                      title="speaking now"
+                      className="p-1.5 rounded-lg text-[#00AA72] animate-pulse bg-[#E8F8F1] border border-[#00AA72]/30"
+                      title="Speaking now"
                     >
-                      <Volume2 className="w-3.5 h-3.5 text-emerald-600" />
+                      <Volume2 className="w-3.5 h-3.5 text-[#00AA72]" />
                     </div>
                   ) : (
-                    <div className="p-1 rounded-md text-neutral-400" title="microphone active">
-                      <Mic className="w-3.5 h-3.5 text-neutral-400" />
+                    <div className="p-1.5 rounded-lg bg-neutral-100 text-[#3355FF] border border-[#15162B]/15" title="Microphone active">
+                      <Mic className="w-3.5 h-3.5 text-[#3355FF]" />
                     </div>
                   )}
                 </div>
@@ -351,44 +355,46 @@ export const ParticipantRail: React.FC<ParticipantRailProps> = ({
         </div>
       </div>
 
-      {/* Call Controls anchored at bottom of rail per DESIGN.md */}
-      <div className="p-3 border-t hairline-border bg-white flex flex-col gap-2">
+      {/* Call Controls anchored at bottom of rail */}
+      <div className="p-3.5 border-t-2 border-[#15162B] bg-[#FAF8F3] flex flex-col gap-2.5">
         {/* Voice status indicator badge */}
-        <div className="flex items-center justify-between text-[11px] px-1 text-neutral-500">
+        <div className="flex items-center justify-between text-xs px-1 text-[#444654] font-mono">
           <span className="flex items-center gap-1.5">
             <span
-              className={`w-1.5 h-1.5 rounded-full ${
+              className={`w-2 h-2 rounded-full ${
                 voiceStatus === 'connected'
-                  ? 'bg-emerald-500 animate-pulse'
+                  ? 'bg-[#00AA72] animate-pulse'
                   : voiceStatus === 'connecting' || voiceStatus === 'reconnecting'
-                  ? 'bg-amber-500 animate-pulse'
+                  ? 'bg-[#FFDD33] animate-pulse'
                   : voiceStatus === 'fallback'
-                  ? 'bg-indigo-500'
-                  : 'bg-neutral-300'
+                  ? 'bg-[#3355FF]'
+                  : 'bg-[#8F91A0]'
               }`}
             />
-            {voiceStatus === 'connected'
-              ? 'voice live'
-              : voiceStatus === 'connecting'
-              ? 'connecting voice...'
-              : voiceStatus === 'reconnecting'
-              ? 'reconnecting voice...'
-              : voiceStatus === 'fallback'
-              ? 'simulated voice'
-              : 'voice offline'}
+            <span className="font-bold text-[#15162B]">
+              {voiceStatus === 'connected'
+                ? 'Voice live'
+                : voiceStatus === 'connecting'
+                ? 'Connecting...'
+                : voiceStatus === 'reconnecting'
+                ? 'Reconnecting...'
+                : voiceStatus === 'fallback'
+                ? 'Simulated voice'
+                : 'Voice offline'}
+            </span>
           </span>
 
           {onToggleSimulateSpeak && (
             <button
               onClick={onToggleSimulateSpeak}
-              className={`text-[10px] px-1.5 py-0.5 rounded border hairline-border cursor-pointer ${
+              className={`text-[10px] px-2 py-0.5 rounded-md border border-[#15162B] font-bold cursor-pointer ${
                 isSpeaking
-                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                  : 'text-neutral-500 hover:bg-neutral-50'
+                  ? 'bg-[#E8F8F1] text-[#00AA72]'
+                  : 'bg-white text-[#15162B] hover:bg-[#F2EFE6]'
               }`}
-              title="test speaking indicator"
+              title="Test speaking indicator"
             >
-              {isSpeaking ? 'speaking...' : 'test speak'}
+              {isSpeaking ? 'Speaking...' : 'Test speak'}
             </button>
           )}
         </div>
@@ -397,29 +403,29 @@ export const ParticipantRail: React.FC<ParticipantRailProps> = ({
         <div className="flex items-center justify-between gap-2">
           <button
             onClick={onToggleMute}
-            className={`flex-1 py-2 px-3 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
+            className={`flex-1 py-2 px-3 rounded-xl font-display font-bold text-xs border-2 border-[#15162B] hard-shadow-xs transition-transform flex items-center justify-center gap-1.5 cursor-pointer ${
               isMuted
-                ? 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200'
-                : 'bg-neutral-100 text-neutral-800 hover:bg-neutral-200'
+                ? 'bg-[#FFE3E0] text-[#FF5B4C] hover:bg-[#FFDAD5]'
+                : 'bg-[#3355FF] text-white hover:bg-[#2545D9]'
             }`}
           >
             {isMuted ? (
               <>
-                <MicOff className="w-3.5 h-3.5 text-rose-600" />
-                <span>unmute mic</span>
+                <MicOff className="w-3.5 h-3.5" />
+                <span>Unmute mic</span>
               </>
             ) : (
               <>
-                <Mic className="w-3.5 h-3.5 text-neutral-600" />
-                <span>mute mic</span>
+                <Mic className="w-3.5 h-3.5" />
+                <span>Mute mic</span>
               </>
             )}
           </button>
 
           <button
             onClick={onLeaveRoom}
-            className="p-2 rounded-lg text-neutral-500 hover:text-rose-600 hover:bg-rose-50 border hairline-border transition-colors cursor-pointer"
-            title="leave room"
+            className="p-2 rounded-xl text-[#15162B] bg-white hover:text-[#FF5B4C] hover:bg-[#FFE3E0] border-2 border-[#15162B] hard-shadow-xs transition-colors cursor-pointer"
+            title="Leave room"
           >
             <LogOut className="w-4 h-4" />
           </button>

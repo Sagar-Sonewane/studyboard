@@ -60,41 +60,52 @@ export const CreateRoomModal: React.FC<CreateRoomModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl max-w-md w-full border hairline-border shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+    <div className="fixed inset-0 z-50 bg-[#15162B]/50 backdrop-blur-xs flex items-center justify-center p-4">
+      <div className="bg-[#FAF8F3] rounded-2xl max-w-md w-full border-2 border-[#15162B] hard-shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
         {/* Header */}
-        <div className="px-6 py-4 border-b hairline-border flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-neutral-900">
-            {createdRoom ? 'Room created successfully' : 'Create a new study room'}
-          </h2>
+        <div className="px-6 py-4 border-b-2 border-[#15162B] bg-[#F7F5EF] flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-[#3355FF] border-2 border-[#15162B] hard-shadow-sm flex items-center justify-center text-white font-display font-extrabold text-sm">
+              <Plus className="w-4 h-4 stroke-[3]" />
+            </div>
+            <div>
+              <h2 className="font-display font-bold text-base text-[#15162B] leading-none">
+                {createdRoom ? 'Room created successfully' : 'Create a new study room'}
+              </h2>
+              <p className="text-[11px] text-[#444654] mt-0.5 font-medium">
+                {createdRoom ? 'Your collaborative session is ready' : 'Host real-time voice & infinite canvas'}
+              </p>
+            </div>
+          </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-md text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors"
+            aria-label="Close dialog"
+            className="w-8 h-8 rounded-lg border-2 border-[#15162B] bg-white hover:bg-[#FF5B4C] hover:text-white text-[#15162B] transition-colors flex items-center justify-center hard-shadow-sm active:translate-x-0.5 active:translate-y-0.5"
           >
-            <X className="w-4 h-4" />
+            <X className="w-4 h-4 stroke-[2.5]" />
           </button>
         </div>
 
         {/* Content */}
         <div className="p-6">
           {!user ? (
-            <div className="text-center py-4">
-              <ShieldAlert className="w-8 h-8 text-amber-600 mx-auto mb-2" />
-              <p className="text-sm font-medium text-neutral-800 mb-1">Host identity required</p>
-              <p className="text-xs text-neutral-500 mb-4">
-                Creating rooms and managing whiteboard sessions requires an account or active host identity.
+            <div className="p-5 bg-[#FFEAE8] border-2 border-[#FF5B4C] rounded-xl text-center hard-shadow-sm">
+              <ShieldAlert className="w-8 h-8 text-[#FF5B4C] mx-auto mb-2" />
+              <p className="font-display font-bold text-sm text-[#15162B] mb-1">Host identity required</p>
+              <p className="text-xs text-[#444654] font-medium leading-relaxed">
+                Creating rooms and managing live sessions requires an account or active host identity.
               </p>
             </div>
           ) : !createdRoom ? (
             <form onSubmit={handleCreate} className="space-y-4">
               {error && (
-                <div className="p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-xs text-rose-700">
+                <div className="p-3 rounded-xl bg-[#FFEAE8] border-2 border-[#FF5B4C] text-xs font-medium text-[#C42616]">
                   {error}
                 </div>
               )}
 
               <div>
-                <label className="block text-xs font-medium text-neutral-700 mb-1">
+                <label className="block text-xs font-bold text-[#15162B] mb-1.5 font-display uppercase tracking-wider">
                   Room name
                 </label>
                 <input
@@ -102,40 +113,44 @@ export const CreateRoomModal: React.FC<CreateRoomModalProps> = ({
                   value={roomName}
                   onChange={(e) => setRoomName(e.target.value)}
                   placeholder={`${displayName || 'Alex'}'s Study Room`}
-                  className="w-full px-3 py-2 text-xs border hairline-border rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-neutral-50 focus:bg-white transition-colors"
+                  className="w-full px-3.5 py-2.5 text-xs border-2 border-[#15162B] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#3355FF] bg-white hard-shadow-sm text-[#15162B] font-medium transition-all"
                 />
-                <p className="text-[11px] text-neutral-400 mt-1">
-                  Give your session a name your participants will recognize.
+                <p className="text-[11px] text-[#888A98] mt-1.5 font-medium">
+                  Give your session a name participants will recognize on their invites.
                 </p>
               </div>
 
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium rounded-lg transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
+                className="w-full py-3 px-4 bg-[#3355FF] hover:bg-[#2544e6] text-white text-xs font-display font-bold uppercase tracking-wider rounded-xl border-2 border-[#15162B] hard-shadow hard-shadow-hover transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
               >
-                <Plus className="w-3.5 h-3.5" />
-                {loading ? 'creating room...' : 'create room'}
+                <Plus className="w-4 h-4 stroke-[3]" />
+                {loading ? 'Creating room...' : 'Create room'}
               </button>
             </form>
           ) : (
-            <div className="space-y-4">
-              <div className="p-4 bg-neutral-50 border hairline-border rounded-xl">
-                <div className="text-xs text-neutral-500 mb-1">Room name</div>
-                <div className="text-sm font-semibold text-neutral-900 mb-3">{createdRoom.name}</div>
+            <div className="space-y-5">
+              <div className="p-4 bg-white border-2 border-[#15162B] rounded-xl hard-shadow-sm space-y-3">
+                <div>
+                  <div className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#888A98]">Room name</div>
+                  <div className="text-base font-display font-bold text-[#15162B] mt-0.5">{createdRoom.name}</div>
+                </div>
 
-                <div className="text-xs text-neutral-500 mb-1">Shareable invite link</div>
-                <div className="flex items-center gap-1.5 bg-white p-2 border hairline-border rounded-lg">
-                  <span className="text-xs font-mono text-neutral-700 truncate flex-1 select-all">
-                    {getInviteLink(createdRoom.inviteCode)}
-                  </span>
-                  <button
-                    onClick={() => handleCopyLink(createdRoom.inviteCode)}
-                    className="px-2 py-1 text-xs bg-neutral-100 hover:bg-neutral-200 text-neutral-800 rounded-md transition-colors inline-flex items-center gap-1"
-                  >
-                    {copied ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
-                    {copied ? 'copied' : 'copy'}
-                  </button>
+                <div>
+                  <div className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#888A98] mb-1.5">Shareable invite link</div>
+                  <div className="flex items-center gap-2 bg-[#FAF8F3] p-2 border-2 border-[#15162B] rounded-lg">
+                    <span className="text-xs font-mono font-medium text-[#15162B] truncate flex-1 select-all">
+                      {getInviteLink(createdRoom.inviteCode)}
+                    </span>
+                    <button
+                      onClick={() => handleCopyLink(createdRoom.inviteCode)}
+                      className="px-3 py-1.5 text-xs font-display font-bold bg-[#FFDD33] hover:bg-[#ffe55b] text-[#15162B] rounded-md border-2 border-[#15162B] transition-all inline-flex items-center gap-1.5 hard-shadow-sm active:translate-x-0.5 active:translate-y-0.5 cursor-pointer shrink-0"
+                    >
+                      {copied ? <Check className="w-3.5 h-3.5 stroke-[3] text-[#00AA72]" /> : <Copy className="w-3.5 h-3.5" />}
+                      {copied ? 'Copied' : 'Copy link'}
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -143,10 +158,10 @@ export const CreateRoomModal: React.FC<CreateRoomModalProps> = ({
                 <button
                   type="button"
                   onClick={handleEnter}
-                  className="flex-1 py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium rounded-lg transition-colors flex items-center justify-center gap-1.5"
+                  className="w-full py-3 px-4 bg-[#3355FF] hover:bg-[#2544e6] text-white text-xs font-display font-bold uppercase tracking-wider rounded-xl border-2 border-[#15162B] hard-shadow hard-shadow-hover transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  enter room now
-                  <ArrowRight className="w-3.5 h-3.5" />
+                  Enter room now
+                  <ArrowRight className="w-4 h-4 stroke-[3]" />
                 </button>
               </div>
             </div>

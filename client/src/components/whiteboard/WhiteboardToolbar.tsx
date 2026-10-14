@@ -60,14 +60,14 @@ interface WhiteboardToolbarProps {
 
 // Curated StudySync Color Palette
 const COLORS: { name: string; value: WhiteboardColor; bgClass: string }[] = [
-  { name: 'black', value: 'black', bgClass: 'bg-neutral-900' },
-  { name: 'grey', value: 'grey', bgClass: 'bg-neutral-500' },
-  { name: 'blue', value: 'blue', bgClass: 'bg-indigo-600' },
-  { name: 'green', value: 'green', bgClass: 'bg-emerald-600' },
-  { name: 'yellow', value: 'yellow', bgClass: 'bg-amber-500' },
-  { name: 'orange', value: 'orange', bgClass: 'bg-orange-500' },
-  { name: 'red', value: 'red', bgClass: 'bg-rose-500' },
-  { name: 'violet', value: 'violet', bgClass: 'bg-purple-600' },
+  { name: 'black', value: 'black', bgClass: 'bg-[#15162B]' },
+  { name: 'grey', value: 'grey', bgClass: 'bg-[#444654]' },
+  { name: 'blue', value: 'blue', bgClass: 'bg-[#3355FF]' },
+  { name: 'green', value: 'green', bgClass: 'bg-[#00AA72]' },
+  { name: 'yellow', value: 'yellow', bgClass: 'bg-[#FFDD33]' },
+  { name: 'orange', value: 'orange', bgClass: 'bg-[#FF9900]' },
+  { name: 'red', value: 'red', bgClass: 'bg-[#FF5B4C]' },
+  { name: 'violet', value: 'violet', bgClass: 'bg-[#8A3FFC]' },
 ];
 
 // Stroke sizes
@@ -185,37 +185,37 @@ export const WhiteboardToolbar: React.FC<WhiteboardToolbarProps> = ({
   // When participant does not have draw permission (Locked Mode)
   if (!canDraw) {
     return (
-      <aside className="fixed md:absolute right-3 top-1/2 -translate-y-1/2 z-30 select-none flex flex-col gap-2 items-end">
-        <div className="bg-white/95 backdrop-blur-sm p-2 rounded-2xl border hairline-border shadow-xs flex flex-col items-center gap-2 max-w-[140px] text-center">
-          <div className="w-8 h-8 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-500">
-            <Lock className="w-4 h-4" />
+      <aside className="fixed md:absolute right-3 top-1/2 -translate-y-1/2 z-30 select-none flex flex-col gap-2 font-sans">
+        <div className="bg-[#FAF8F3] border-2 border-[#15162B] hard-shadow-md rounded-2xl p-3 flex flex-col items-center gap-2 max-w-[130px] text-center">
+          <div className="w-8 h-8 rounded-xl bg-[#FFF9D6] border-2 border-[#15162B] flex items-center justify-center text-[#15162B]">
+            <Lock className="w-4 h-4 text-[#D47500]" />
           </div>
 
-          <div className="text-[11px] font-medium text-neutral-600 leading-tight">
-            drawing locked
+          <div className="text-[11px] font-display font-bold text-[#15162B] leading-tight">
+            Drawing locked
           </div>
 
           <button
             onClick={onRequestDraw}
             disabled={drawRequestSent}
-            className="w-full py-1.5 px-2 bg-indigo-600 text-white hover:bg-indigo-700 disabled:bg-neutral-200 disabled:text-neutral-500 rounded-xl text-[11px] font-medium transition-colors flex items-center justify-center gap-1 cursor-pointer disabled:cursor-default"
+            className="w-full py-1.5 px-2 bg-[#3355FF] text-white hover:bg-[#2545D9] disabled:bg-neutral-200 disabled:text-neutral-500 border-2 border-[#15162B] hard-shadow-xs rounded-xl text-xs font-display font-bold transition-all flex items-center justify-center gap-1 cursor-pointer disabled:cursor-default"
           >
             {drawRequestSent ? (
               <>
-                <Check className="w-3 h-3 text-emerald-300" />
-                <span>sent</span>
+                <Check className="w-3 h-3 text-[#FFDD33]" />
+                <span>Sent</span>
               </>
             ) : (
               <>
                 <Hand className="w-3 h-3" />
-                <span>request to draw</span>
+                <span>Request</span>
               </>
             )}
           </button>
         </div>
 
         {drawRequestFeedback && (
-          <div className="bg-neutral-900 text-white text-[11px] px-2.5 py-1 rounded-lg shadow-md animate-in fade-in slide-in-from-right-1 duration-150">
+          <div className="bg-[#15162B] text-white text-[11px] font-mono px-3 py-1.5 rounded-xl border border-white/20 shadow-md animate-in fade-in slide-in-from-right-1 duration-150">
             {drawRequestFeedback}
           </div>
         )}
@@ -226,18 +226,18 @@ export const WhiteboardToolbar: React.FC<WhiteboardToolbarProps> = ({
   const isGeoActive = activeTool === 'geo' || activeTool === 'arrow' || activeTool === 'line';
 
   return (
-    <aside className="fixed md:absolute right-3 top-1/2 -translate-y-1/2 z-30 select-none flex flex-col gap-1.5">
-      {/* Main vertical icon toolbar per DESIGN.md */}
-      <div className="flex flex-col gap-1 bg-white/95 backdrop-blur-sm p-1.5 rounded-2xl border hairline-border shadow-xs">
+    <aside className="fixed md:absolute right-3 top-1/2 -translate-y-1/2 z-30 select-none flex flex-col gap-1.5 font-sans">
+      {/* Main vertical icon toolbar per StudySync Design */}
+      <div className="flex flex-col gap-1 bg-[#FAF8F3]/95 backdrop-blur-md p-1.5 rounded-2xl border-2 border-[#15162B] hard-shadow-sm">
         {/* 1. Select / Pointer */}
         <button
           onClick={() => onToolSelect('select')}
-          className={`p-2 rounded-xl transition-colors cursor-pointer group relative ${
+          className={`p-2 rounded-xl transition-all cursor-pointer group relative ${
             activeTool === 'select'
-              ? 'bg-indigo-50 text-indigo-600'
-              : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
+              ? 'bg-[#3355FF] text-white border-2 border-[#15162B] hard-shadow-xs'
+              : 'text-[#15162B] hover:bg-white hover:border-[#15162B]/20 border border-transparent'
           }`}
-          title="select tool (v)"
+          title="Select tool (v)"
         >
           <MousePointer className="w-4 h-4" />
           <span className="sr-only">select</span>
@@ -246,12 +246,12 @@ export const WhiteboardToolbar: React.FC<WhiteboardToolbarProps> = ({
         {/* 2. Pen */}
         <button
           onClick={() => onToolSelect('draw')}
-          className={`p-2 rounded-xl transition-colors cursor-pointer group relative ${
+          className={`p-2 rounded-xl transition-all cursor-pointer group relative ${
             activeTool === 'draw'
-              ? 'bg-indigo-50 text-indigo-600'
-              : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
+              ? 'bg-[#3355FF] text-white border-2 border-[#15162B] hard-shadow-xs'
+              : 'text-[#15162B] hover:bg-white hover:border-[#15162B]/20 border border-transparent'
           }`}
-          title="pen tool (p)"
+          title="Pen tool (p)"
         >
           <PenTool className="w-4 h-4" />
           <span className="sr-only">pen</span>
@@ -260,12 +260,12 @@ export const WhiteboardToolbar: React.FC<WhiteboardToolbarProps> = ({
         {/* 3. Highlighter */}
         <button
           onClick={() => onToolSelect('highlight')}
-          className={`p-2 rounded-xl transition-colors cursor-pointer group relative ${
+          className={`p-2 rounded-xl transition-all cursor-pointer group relative ${
             activeTool === 'highlight'
-              ? 'bg-indigo-50 text-indigo-600'
-              : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
+              ? 'bg-[#3355FF] text-white border-2 border-[#15162B] hard-shadow-xs'
+              : 'text-[#15162B] hover:bg-white hover:border-[#15162B]/20 border border-transparent'
           }`}
-          title="highlighter tool (h)"
+          title="Highlighter tool (h)"
         >
           <Highlighter className="w-4 h-4" />
           <span className="sr-only">highlighter</span>
@@ -274,12 +274,12 @@ export const WhiteboardToolbar: React.FC<WhiteboardToolbarProps> = ({
         {/* 4. Eraser */}
         <button
           onClick={() => onToolSelect('eraser')}
-          className={`p-2 rounded-xl transition-colors cursor-pointer group relative ${
+          className={`p-2 rounded-xl transition-all cursor-pointer group relative ${
             activeTool === 'eraser'
-              ? 'bg-indigo-50 text-indigo-600'
-              : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
+              ? 'bg-[#3355FF] text-white border-2 border-[#15162B] hard-shadow-xs'
+              : 'text-[#15162B] hover:bg-white hover:border-[#15162B]/20 border border-transparent'
           }`}
-          title="eraser tool (e)"
+          title="Eraser tool (e)"
         >
           <Eraser className="w-4 h-4" />
           <span className="sr-only">eraser</span>
@@ -294,12 +294,12 @@ export const WhiteboardToolbar: React.FC<WhiteboardToolbarProps> = ({
                 handleShapeSelect(selectedShape);
               }
             }}
-            className={`p-2 rounded-xl transition-colors cursor-pointer group relative flex items-center justify-center ${
+            className={`p-2 rounded-xl transition-all cursor-pointer group relative flex items-center justify-center ${
               isGeoActive
-                ? 'bg-indigo-50 text-indigo-600'
-                : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
+                ? 'bg-[#3355FF] text-white border-2 border-[#15162B] hard-shadow-xs'
+                : 'text-[#15162B] hover:bg-white hover:border-[#15162B]/20 border border-transparent'
             }`}
-            title="shapes (r)"
+            title="Shapes (r)"
           >
             {selectedShape === 'ellipse' ? (
               <Circle className="w-4 h-4" />
@@ -318,7 +318,7 @@ export const WhiteboardToolbar: React.FC<WhiteboardToolbarProps> = ({
 
           {/* Shapes flyout menu (left side of rail) */}
           {shapesMenuOpen && (
-            <div className="absolute right-12 top-0 bg-white border hairline-border rounded-xl p-1.5 shadow-md flex items-center gap-1 z-40 animate-in fade-in zoom-in-95 duration-100">
+            <div className="absolute right-14 top-0 bg-[#FAF8F3] border-2 border-[#15162B] hard-shadow-md rounded-2xl p-2 flex items-center gap-1.5 z-40 animate-in fade-in zoom-in-95 duration-100">
               {SHAPES.map((shape) => {
                 const Icon = shape.icon;
                 const isSelected = selectedShape === shape.id;
@@ -326,8 +326,10 @@ export const WhiteboardToolbar: React.FC<WhiteboardToolbarProps> = ({
                   <button
                     key={shape.id}
                     onClick={() => handleShapeSelect(shape.id)}
-                    className={`p-2 rounded-lg text-neutral-600 hover:text-neutral-900 transition-colors cursor-pointer ${
-                      isSelected ? 'bg-indigo-50 text-indigo-600 font-semibold' : 'hover:bg-neutral-100'
+                    className={`p-2 rounded-xl transition-all cursor-pointer ${
+                      isSelected
+                        ? 'bg-[#3355FF] text-white border-2 border-[#15162B] hard-shadow-xs'
+                        : 'text-[#15162B] hover:bg-white hover:border-[#15162B]/20 border border-transparent'
                     }`}
                     title={shape.label}
                   >
@@ -342,12 +344,12 @@ export const WhiteboardToolbar: React.FC<WhiteboardToolbarProps> = ({
         {/* 6. Text */}
         <button
           onClick={() => onToolSelect('text')}
-          className={`p-2 rounded-xl transition-colors cursor-pointer group relative ${
+          className={`p-2 rounded-xl transition-all cursor-pointer group relative ${
             activeTool === 'text'
-              ? 'bg-indigo-50 text-indigo-600'
-              : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
+              ? 'bg-[#3355FF] text-white border-2 border-[#15162B] hard-shadow-xs'
+              : 'text-[#15162B] hover:bg-white hover:border-[#15162B]/20 border border-transparent'
           }`}
-          title="text tool (t)"
+          title="Text tool (t)"
         >
           <Type className="w-4 h-4" />
           <span className="sr-only">text</span>
@@ -356,50 +358,50 @@ export const WhiteboardToolbar: React.FC<WhiteboardToolbarProps> = ({
         {/* 7. Sticky Note */}
         <button
           onClick={() => onToolSelect('note')}
-          className={`p-2 rounded-xl transition-colors cursor-pointer group relative ${
+          className={`p-2 rounded-xl transition-all cursor-pointer group relative ${
             activeTool === 'note'
-              ? 'bg-indigo-50 text-indigo-600'
-              : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
+              ? 'bg-[#3355FF] text-white border-2 border-[#15162B] hard-shadow-xs'
+              : 'text-[#15162B] hover:bg-white hover:border-[#15162B]/20 border border-transparent'
           }`}
-          title="sticky note tool (n)"
+          title="Sticky note tool (n)"
         >
           <StickyNote className="w-4 h-4" />
           <span className="sr-only">note</span>
         </button>
 
-        {/* Hairline Divider */}
-        <div className="h-px bg-neutral-200 my-1 mx-1" />
+        {/* Divider */}
+        <div className="h-px bg-[#15162B]/15 my-1 mx-1" />
 
         {/* 8. Palette & Styling Popover (Color, Stroke Size, Dash Style) */}
         <div className="relative" ref={paletteRef}>
           <button
             onClick={() => setPaletteMenuOpen((prev) => !prev)}
-            className={`p-2 rounded-xl transition-colors cursor-pointer group relative ${
+            className={`p-2 rounded-xl transition-all cursor-pointer group relative ${
               paletteMenuOpen
-                ? 'bg-indigo-50 text-indigo-600'
-                : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
+                ? 'bg-[#FFDD33] text-[#15162B] border-2 border-[#15162B] hard-shadow-xs'
+                : 'text-[#15162B] hover:bg-white hover:border-[#15162B]/20 border border-transparent'
             }`}
-            title="color, stroke size and dash style"
+            title="Color, stroke size and dash style"
           >
             <Palette className="w-4 h-4" />
           </button>
 
           {/* Palette Flyout */}
           {paletteMenuOpen && (
-            <div className="absolute right-12 top-0 bg-white border hairline-border rounded-2xl p-3 shadow-md z-40 w-52 animate-in fade-in zoom-in-95 duration-100 space-y-3">
+            <div className="absolute right-14 top-0 bg-[#FAF8F3] border-2 border-[#15162B] hard-shadow-md rounded-2xl p-3.5 z-40 w-56 animate-in fade-in zoom-in-95 duration-100 space-y-3.5">
               {/* Color Selection */}
               <div>
-                <span className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider block mb-1.5">
-                  color
+                <span className="text-[10px] font-mono font-bold text-[#444654] uppercase tracking-wider block mb-2">
+                  Color
                 </span>
-                <div className="grid grid-cols-4 gap-1.5">
+                <div className="grid grid-cols-4 gap-2">
                   {COLORS.map((c) => (
                     <button
                       key={c.value}
                       onClick={() => handleColorChange(c.value)}
-                      className={`w-7 h-7 rounded-lg flex items-center justify-center transition-transform cursor-pointer ${c.bgClass} ${
+                      className={`w-7 h-7 rounded-lg border-2 border-[#15162B] flex items-center justify-center transition-transform cursor-pointer ${c.bgClass} ${
                         selectedColor === c.value
-                          ? 'ring-2 ring-indigo-500 ring-offset-2 scale-105'
+                          ? 'ring-2 ring-[#3355FF] ring-offset-2 scale-110 shadow-sm'
                           : 'hover:scale-105'
                       }`}
                       title={c.name}
@@ -409,19 +411,19 @@ export const WhiteboardToolbar: React.FC<WhiteboardToolbarProps> = ({
               </div>
 
               {/* Stroke Size Selection */}
-              <div className="border-t hairline-border pt-2">
-                <span className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider block mb-1.5">
-                  stroke size
+              <div className="border-t-2 border-[#15162B]/10 pt-2.5">
+                <span className="text-[10px] font-mono font-bold text-[#444654] uppercase tracking-wider block mb-2">
+                  Stroke Size
                 </span>
-                <div className="flex items-center justify-between bg-neutral-50 p-1 rounded-xl border hairline-border">
+                <div className="flex items-center justify-between bg-white p-1 rounded-xl border-2 border-[#15162B]">
                   {SIZES.map((s) => (
                     <button
                       key={s.value}
                       onClick={() => handleSizeChange(s.value)}
                       className={`p-1.5 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${
                         selectedSize === s.value
-                          ? 'bg-white shadow-xs text-indigo-600'
-                          : 'text-neutral-400 hover:text-neutral-700'
+                          ? 'bg-[#3355FF] text-white shadow-xs'
+                          : 'text-[#444654] hover:text-[#15162B]'
                       }`}
                       title={s.label}
                     >
@@ -432,19 +434,19 @@ export const WhiteboardToolbar: React.FC<WhiteboardToolbarProps> = ({
               </div>
 
               {/* Dash Style Selection */}
-              <div className="border-t hairline-border pt-2">
-                <span className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider block mb-1.5">
-                  dash style
+              <div className="border-t-2 border-[#15162B]/10 pt-2.5">
+                <span className="text-[10px] font-mono font-bold text-[#444654] uppercase tracking-wider block mb-2">
+                  Dash Style
                 </span>
-                <div className="grid grid-cols-4 gap-1 bg-neutral-50 p-1 rounded-xl border hairline-border">
+                <div className="grid grid-cols-4 gap-1 bg-white p-1 rounded-xl border-2 border-[#15162B]">
                   {DASH_STYLES.map((d) => (
                     <button
                       key={d.value}
                       onClick={() => handleDashChange(d.value)}
                       className={`py-1.5 px-1 rounded-lg flex items-center justify-center text-xs transition-colors cursor-pointer ${
                         selectedDash === d.value
-                          ? 'bg-white shadow-xs text-indigo-600 font-medium'
-                          : 'text-neutral-500 hover:text-neutral-800'
+                          ? 'bg-[#3355FF] text-white font-bold'
+                          : 'text-[#444654] hover:text-[#15162B]'
                       }`}
                       title={d.label}
                     >
@@ -461,8 +463,8 @@ export const WhiteboardToolbar: React.FC<WhiteboardToolbarProps> = ({
         <button
           onClick={handleUndo}
           disabled={!canUndo}
-          className="p-2 rounded-xl text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
-          title="undo (ctrl+z)"
+          className="p-2 rounded-xl text-[#15162B] hover:bg-white hover:border-[#15162B]/20 border border-transparent transition-colors disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
+          title="Undo (Ctrl+Z)"
         >
           <Undo2 className="w-4 h-4" />
           <span className="sr-only">undo</span>
@@ -472,8 +474,8 @@ export const WhiteboardToolbar: React.FC<WhiteboardToolbarProps> = ({
         <button
           onClick={handleRedo}
           disabled={!canRedo}
-          className="p-2 rounded-xl text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
-          title="redo (ctrl+y / ctrl+shift+z)"
+          className="p-2 rounded-xl text-[#15162B] hover:bg-white hover:border-[#15162B]/20 border border-transparent transition-colors disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
+          title="Redo (Ctrl+Y)"
         >
           <Redo2 className="w-4 h-4" />
           <span className="sr-only">redo</span>

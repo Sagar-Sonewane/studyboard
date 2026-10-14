@@ -33,7 +33,7 @@ discrepancies" during a routine update) — don't repeat that.
 
 ## Current phase
 
-`Phase 6.4 completed (Marketing Landing Page built to DESIGN.md & PRODUCT.md specifications, pop-art paper/ink/marker aesthetic, Space Grotesk typography, tilted sticky notes, ticket-stub pricing cards, and invite route bypass verified) — ready for Phase 6.5 (deployment to Vercel + Railway/Render). Phases 7/8 remain paused.`
+`Phase 6.6 completed (Application-Wide Design System Unification: unified the room workspace, header, 3-state participant rail, whiteboard toolbar, bottom controls, and all auth/create/join dialogs to match the StudySync brand identity established by the redesigned homepage) — ready for deployment. Phases 7/8 remain paused.`
 
 ## Environment status
 
@@ -110,7 +110,20 @@ discrepancies" during a routine update) — don't repeat that.
     - `/room/:inviteCode` and `/?join=:code` **bypass the landing page entirely**, immediately opening the dedicated join screen.
     - "Start a room" triggers auth and room creation flow; "Join with code" opens the join modal.
     - Updated `CreateRoomModal.tsx` and `RoomView.tsx` to generate canonical `/room/:inviteCode` links.
-- **Phase 6.4 — Polish Pass**:
+- **Phase 6.5 — Premium Product-Led Homepage Redesign**:
+  - **Modular Architecture**: Refactored monolithic `LandingPage.tsx` into focused, reusable components under `client/src/components/landing/`:
+    - `LandingHeader.tsx`: 72px sticky nav, responsive anchor links, auth state chip, sign in/out, and mobile drawer.
+    - `HeroWorkspacePreview.tsx`: Authentic collaborative canvas preview featuring real-time moving collaborator cursors (`motion`), animated audio pulse wave for Sarah (host), architecture diagrams, sticky roadmap note, and forked copy indicator.
+    - `ProblemSolutionSection.tsx`: Clear side-by-side comparison contrasting tool fatigue (separate call apps + whiteboard tabs) with the unified StudySync room.
+    - `HowItWorksSection.tsx`: 3-step visual workflow (Create room, Share link, Talk & sketch together).
+    - `FeatureDeepDiveSection.tsx`: Interactive capability deep dives for natural voice integration, private board forking, and non-destructive PDF annotation layers.
+    - `AudienceUseCasesSection.tsx`: Interactive tabs with tailored canvas previews for Study Groups & Tutors, Startups & Builders, and Remote Teams.
+    - `PricingSection.tsx`: Ticket-stub pricing cards powered by `PLAN_LIMITS` with Free $0 active, Day Pass $3 & Monthly $9 honestly marked "Coming soon", and host-pays reassurance.
+    - `FinalCtaSection.tsx`: Bold closing call to action ("Your next great idea starts in a room.") with dual action buttons.
+    - `LandingFooter.tsx`: Branded footer with legal modals (Privacy, Terms, Contact) and founder feedback link.
+  - **Dependencies**: Added `motion` (`^14.2.0`) to `client/package.json` for smooth, accessible micro-interactions with `useReducedMotion()` fallback support.
+  - **Visual & Narrative Polish**: Preserved warm ivory (`#F7F5EF`), ink navy (`#15162B`), electric blue (`#3355FF`), and yellow highlighter (`#FFDD33`) tokens while establishing strict visual hierarchy, comfortable line lengths, and consistent elevation shadows.
+  - **Verification**: Verified zero TypeScript errors with `npm run build` and performed full visual audit at 1920x1080 (desktop) and 375x812 (mobile) viewports using `browser_subagent`. Verified room creation and join modal interactions.
   - **Content & Trust**: Removed all developer jargon ("Yjs", "CRDT", "WebRTC", "LiveKit", "pdf.js", "binary sync", "rasterizer") across all copy and the hero preview card. Replaced tech footnotes with benefit tags ("no separate call link", "your own private copy", "highlight anything").
   - **Plausible Hero Preview**: Added work/study-plausible sticky notes ("Launch checklist 📌", "User Auth", "API Gateway", "Shared Board") with text ≥ 12px. Replaced "0 latency" with "4 in room · voice on". Relocated "forked by you" tag to bottom-left corner with `-rotate-[4deg]` so it never collides with top voice pill.
   - **Honest Positioning & Config**: Changed "used by:" to "built for:" with Lucide SVG icons (`Rocket`, `Briefcase`, `BookOpen`). Created `client/src/config/landing.ts` containing `PLAN_LIMITS` and `FEEDBACK_URL` with TODO comments for future Stripe launch. Paid tiers ("Day Pass", "Monthly Pro") set to muted non-clickable "Coming soon" (`aria-disabled="true"`).
@@ -123,22 +136,32 @@ discrepancies" during a routine update) — don't repeat that.
   - **Branded 404**: Unknown routes render a branded paper/ink 404 screen with a link home.
   - **Visual Verification**: Verified across 1920px desktop and 375px mobile viewports with zero horizontal scroll, functioning mobile menu, and confirmed route bypass for `/room/:code`.
 
+- **Phase 6.6 — Application-Wide Design System Unification**:
+  - **Shared Design Tokens**: Extended the homepage's warm paper (`#F7F5EF` / `#FAF8F3`), ink navy (`#15162B`), electric blue (`#3355FF`), sketch yellow (`#FFDD33`), and hard offset shadow system throughout all in-app components via `client/src/index.css`.
+  - **Room Workspace Header** (`RoomView.tsx`): 56px warm paper bar with brand logo mark, Space Grotesk session name, live room pulse badge, `#FFDD33` host crown badge, quick invite-code pill with copy feedback, and styled leave action.
+  - **3-State Participant Sidebar** (`ParticipantRail.tsx`): Completely updated the hidden floating pill, collapsed avatar strip, and expanded roster panel with warm paper backgrounds, 2px ink navy borders, speaking indicator pulse rings, host crowns, drawing permission lock/unlock toggles, and microphone states.
+  - **Whiteboard Toolbar & Floating Controls** (`WhiteboardToolbar.tsx`, `WhiteboardCanvas.tsx`): Floating paper toolbar with 2px ink navy border, hard shadows, electric blue active tool states, shapes flyout, and color/stroke palette flyout. Kept the drawing canvas predominantly clean white (`bg-white`) for maximum contrast and legibility. Updated floating bottom-left controls (file upload, annotation toggle, zoom) and bottom-right board forking controls.
+  - **Unified Dialogs & Modals**:
+    - `AuthModal.tsx`: Warm ivory card, 2px ink borders, `hard-shadow-xl`, brand mark, segmented tab switcher, styled inputs, and development host profile selector.
+    - `CreateRoomModal.tsx`: Room creation form with host warnings and room-created success ticket with copyable invite link.
+    - `JoinRoomModal.tsx`: Both the modal popup and standalone `/room/:inviteCode` route unified with active room details preview, guest name input, and error states.
+  - **Verification**: Verified production build with `tsc && vite build` (zero errors) and verified in-browser rendering across landing page, modals, and room workspace.
+
 ## Currently in progress
 
-*(none — Phase 6.4 polish pass completed, verified across 1920px/375px viewports, builds cleanly with zero errors)*
+*(none — Phase 6.6 Design System Unification complete, all components visually unified and building with zero errors)*
 
-## Files touched this session (Phase 6.4 Polish Pass)
+## Files touched this session (Phase 6.6 Design System Unification)
 
-- `client/src/config/landing.ts` — Created configuration for `PLAN_LIMITS` and `FEEDBACK_URL`.
-- `client/src/pages/LandingPage.tsx` — Complete polish pass (layout, typography, copy, preview card, 1200px container, modals).
-- `client/src/App.tsx` — Added branded 404 screen for unknown routes and wired join modal callbacks.
-- `client/src/index.css` — Added smooth-scrolling, WCAG focus-visible rings, prefers-reduced-motion, and darkened graphite token.
-- `client/tailwind.config.js` — Darkened `graphite` to `#444654`.
-- `client/index.html` — Added SEO title, meta descriptions, Open Graph & Twitter card metadata, favicon reference.
-- `client/public/favicon.svg` — Branded SVG favicon in paper/ink style.
-- `client/public/og-image.svg` — 1200x630 Open Graph image in paper/ink style.
-- `docs/DESIGN.md` — Updated landing page spec section to reflect 1200px container, mono rules, Coming soon state, and footer links.
-- `docs/PROJECT_STATUS.md` — Logged Phase 6.4 polish pass.
+- `client/src/index.css` — Added shared design system classes (`.panel-border`, `.workspace-surface`, `.workspace-card`).
+- `client/src/components/room/RoomView.tsx` — Unified 56px room header, host badges, invite code pill, and draw request toast.
+- `client/src/components/participants/ParticipantRail.tsx` — Unified hidden pill, collapsed strip, and expanded participant aside.
+- `client/src/components/whiteboard/WhiteboardToolbar.tsx` — Unified floating toolbar, active tool states, shapes flyout, and color palette.
+- `client/src/components/whiteboard/WhiteboardCanvas.tsx` — Unified canvas controls, upload action, annotation toggle, zoom controls, and board forking buttons.
+- `client/src/components/auth/AuthModal.tsx` — Unified sign-in / sign-up modal with brand tokens.
+- `client/src/components/room/CreateRoomModal.tsx` — Unified room creation form and success confirmation card.
+- `client/src/components/room/JoinRoomModal.tsx` — Unified modal and standalone join page.
+- `docs/PROJECT_STATUS.md` — Logged Phase 6.6 accomplishments.
 
 ## Known issues / things to revisit
 
@@ -147,10 +170,10 @@ discrepancies" during a routine update) — don't repeat that.
 ## Decisions / discrepancies to be aware of
 
 - The actual project folder on disk is named `studyboard`, not `studysync`.
-- **Roadmap order**: Phases 7 and 8 (Stripe billing, grace-period pause flow) are intentionally paused. Up next: **Phase 6.5 (deploy to Vercel + Railway/Render)**. Do not resume Phase 7/8 without explicit go-ahead.
+- **Roadmap order**: Phases 7 and 8 (Stripe billing, grace-period pause flow) are intentionally paused. Up next: **Deployment to Vercel + Railway/Render**. Do not resume Phase 7/8 without explicit go-ahead.
 
 ## Next session should start with
 
-**Proceed to Phase 6.5 (Deployment to Vercel + Railway/Render)** per `BUILD_PROMPTS.md`.
+**Proceed to Deployment to Vercel + Railway/Render** per `BUILD_PROMPTS.md`.
 
 

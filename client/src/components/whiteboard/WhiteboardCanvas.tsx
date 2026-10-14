@@ -517,55 +517,55 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
 
   return (
     <div
-      className={`relative w-full h-full flex-1 overflow-hidden bg-[#fdfdfd] ${
+      className={`relative w-full h-full flex-1 overflow-hidden bg-white ${
         !showAnnotations ? 'sb-hide-annotations' : ''
       }`}
     >
       {/* Top Banner when in Forked / Personal Copy Mode */}
       {isForked ? (
-        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 flex items-center gap-3 px-4 py-2 bg-indigo-900/90 backdrop-blur-md text-white border hairline-border border-indigo-700/50 rounded-2xl shadow-sm text-xs animate-in fade-in slide-in-from-top-2 duration-200">
-          <div className="flex items-center gap-1.5 font-medium">
-            <Lock className="w-3.5 h-3.5 text-indigo-300" />
-            <span>personal copy · private board</span>
+        <div className="absolute top-3.5 left-1/2 -translate-x-1/2 z-30 flex items-center gap-3 px-4 py-2 bg-[#15162B] text-white border-2 border-[#15162B] hard-shadow-sm rounded-2xl text-xs animate-in fade-in slide-in-from-top-2 duration-200 font-sans">
+          <div className="flex items-center gap-1.5 font-display font-bold text-[#FFDD33]">
+            <Lock className="w-3.5 h-3.5" />
+            <span>Personal Copy · Private Board</span>
           </div>
-          <div className="w-px h-3 bg-indigo-700" />
+          <div className="w-px h-3.5 bg-white/20" />
           <button
             onClick={handleSwitchToShared}
-            className="flex items-center gap-1 text-indigo-200 hover:text-white transition-colors font-medium cursor-pointer"
+            className="flex items-center gap-1 text-white hover:text-[#FFDD33] transition-colors font-display font-bold cursor-pointer"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
-            <span>switch to shared board</span>
+            <span>Switch to shared board</span>
           </button>
         </div>
       ) : (
         /* Top Status Indicator & Follow-Host Controls for Shared Board */
-        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 hidden sm:flex items-center gap-2">
+        <div className="absolute top-3.5 left-1/2 -translate-x-1/2 z-30 hidden sm:flex items-center gap-2 font-sans">
           {/* Live Sync Status */}
-          <div className="flex items-center gap-1.5 px-3 py-1 bg-white/90 backdrop-blur-sm border hairline-border rounded-full shadow-xs text-[11px] font-medium text-neutral-600">
+          <div className="flex items-center gap-2 px-3 py-1 bg-[#FAF8F3] border-2 border-[#15162B] hard-shadow-xs rounded-full text-xs font-mono font-bold text-[#15162B]">
             {syncState.isConnected ? (
               <>
-                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span>multiplayer live</span>
+                <div className="w-2 h-2 rounded-full bg-[#00AA72] animate-pulse" />
+                <span>Multiplayer live</span>
               </>
             ) : (
               <>
-                <Radio className="w-3 h-3 text-neutral-400 animate-spin" />
-                <span>connecting sync...</span>
+                <Radio className="w-3.5 h-3.5 text-[#D47500] animate-spin" />
+                <span>Connecting sync...</span>
               </>
             )}
           </div>
 
           {/* Follow-Host Viewport Pill (for non-hosts) */}
           {!isHost && (
-            <div className="flex items-center gap-1.5 px-3 py-1 bg-white/90 backdrop-blur-sm border hairline-border rounded-full shadow-xs text-[11px] font-medium">
+            <div className="flex items-center gap-1.5 px-3 py-1 bg-[#FAF8F3] border-2 border-[#15162B] hard-shadow-xs rounded-full text-xs font-display font-bold">
               {isFollowingHost ? (
-                <div className="flex items-center gap-1.5 text-indigo-600">
-                  <Eye className="w-3.5 h-3.5 text-indigo-500 animate-pulse" />
-                  <span>following host</span>
+                <div className="flex items-center gap-1.5 text-[#3355FF]">
+                  <Eye className="w-3.5 h-3.5 text-[#3355FF] animate-pulse" />
+                  <span>Following host</span>
                   <button
                     onClick={() => setIsFollowingHost(false)}
-                    className="ml-1 text-[10px] text-neutral-400 hover:text-neutral-700 transition-colors cursor-pointer"
-                    title="stop following host viewport"
+                    className="ml-1 text-[11px] text-[#444654] hover:text-[#15162B] transition-colors cursor-pointer"
+                    title="Stop following host viewport"
                   >
                     <EyeOff className="w-3.5 h-3.5" />
                   </button>
@@ -573,11 +573,11 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
               ) : (
                 <button
                   onClick={handleJumpToHost}
-                  className="flex items-center gap-1 text-neutral-600 hover:text-indigo-600 transition-colors cursor-pointer"
-                  title="snap and follow host viewport"
+                  className="flex items-center gap-1.5 text-[#15162B] hover:text-[#3355FF] transition-colors cursor-pointer"
+                  title="Snap and follow host viewport"
                 >
-                  <Eye className="w-3.5 h-3.5 text-neutral-400" />
-                  <span>jump to host</span>
+                  <Eye className="w-3.5 h-3.5 text-[#3355FF]" />
+                  <span>Jump to host</span>
                 </button>
               )}
             </div>
@@ -587,29 +587,29 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
 
       {/* Selected Shape Author Attribution Tooltip */}
       {selectedAuthor && (
-        <div className="absolute top-14 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 px-3 py-1 bg-neutral-900/90 backdrop-blur-sm text-white text-[11px] font-medium rounded-full shadow-md animate-in fade-in duration-150">
+        <div className="absolute top-14 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 px-3.5 py-1.5 bg-[#15162B] text-white border-2 border-[#15162B] hard-shadow-sm text-xs font-display font-medium rounded-full animate-in fade-in duration-150">
           <div
             style={{ backgroundColor: selectedAuthor.color }}
-            className="w-2 h-2 rounded-full"
+            className="w-2.5 h-2.5 rounded-full border border-white"
           />
-          <User className="w-3 h-3 text-neutral-400" />
-          <span>created by {selectedAuthor.name}</span>
+          <User className="w-3.5 h-3.5 text-[#B9BAC7]" />
+          <span>Created by {selectedAuthor.name}</span>
         </div>
       )}
 
       {/* Non-intrusive Upload Status & Error Banner */}
       {uploadFeedback && (
         <div
-          className={`absolute top-14 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-medium shadow-md backdrop-blur-sm animate-in fade-in slide-in-from-top-1 ${
+          className={`absolute top-14 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-display font-bold hard-shadow-md animate-in fade-in slide-in-from-top-1 ${
             uploadFeedback.type === 'error'
-              ? 'bg-rose-900/90 text-white border border-rose-700/50'
-              : 'bg-neutral-900/90 text-white border border-neutral-700/50'
+              ? 'bg-[#FFE3E0] text-[#FF5B4C] border-2 border-[#FF5B4C]'
+              : 'bg-[#FAF8F3] text-[#15162B] border-2 border-[#15162B]'
           }`}
         >
           {uploadFeedback.type === 'error' ? (
-            <AlertCircle className="w-3.5 h-3.5 text-rose-400" />
+            <AlertCircle className="w-4 h-4 text-[#FF5B4C]" />
           ) : (
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+            <CheckCircle2 className="w-4 h-4 text-[#00AA72]" />
           )}
           <span>{uploadFeedback.message}</span>
         </div>
@@ -617,7 +617,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
 
       {/* Tldraw Canvas Engine with hidden default UI */}
       <div
-        className="absolute inset-0 z-0"
+        className="absolute inset-0 z-0 bg-white"
         key={isForked ? `forked-${forkedBoardId}` : `shared-${roomId}`}
       >
         <Tldraw
@@ -640,20 +640,20 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
         drawRequestFeedback={drawRequestFeedback}
       />
 
-      {/* Canvas-Anchored Action: Upload File (bottom-left corner per DESIGN.md) */}
-      <div className="absolute bottom-4 left-4 z-20 flex items-center gap-2">
+      {/* Canvas-Anchored Action: Upload File (bottom-left corner per StudySync Design) */}
+      <div className="absolute bottom-4 left-4 z-20 flex items-center gap-2 font-sans">
         <button
           onClick={handleTriggerUpload}
           disabled={!canDraw || isUploading}
-          className="flex items-center gap-1.5 px-3 py-2 bg-white/95 backdrop-blur-sm border hairline-border rounded-xl text-xs font-medium text-neutral-700 hover:bg-neutral-50 shadow-xs transition-colors cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
-          title="upload document, image, or PDF (up to 10MB)"
+          className="flex items-center gap-1.5 px-3 py-2 bg-[#FAF8F3] hover:bg-white border-2 border-[#15162B] hard-shadow-xs rounded-xl text-xs font-display font-bold text-[#15162B] transition-transform cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+          title="Upload document, image, or PDF (up to 10MB)"
         >
           {isUploading ? (
-            <Loader2 className="w-3.5 h-3.5 text-indigo-600 animate-spin" />
+            <Loader2 className="w-4 h-4 text-[#3355FF] animate-spin" />
           ) : (
-            <UploadCloud className="w-3.5 h-3.5 text-indigo-600" />
+            <UploadCloud className="w-4 h-4 text-[#3355FF]" />
           )}
-          <span>{isUploading ? uploadProgressText || 'uploading...' : 'upload file'}</span>
+          <span>{isUploading ? uploadProgressText || 'Uploading...' : 'Upload file'}</span>
         </button>
 
         <input
@@ -667,80 +667,80 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
         {/* Canvas-Anchored Annotation Layer Toggle (Highlighter & Pen on/off) */}
         <button
           onClick={() => setShowAnnotations(!showAnnotations)}
-          className={`hidden sm:flex items-center gap-1.5 px-2.5 py-2 rounded-xl border hairline-border text-xs font-medium shadow-xs transition-colors cursor-pointer ${
+          className={`hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl border-2 border-[#15162B] hard-shadow-xs text-xs font-display font-bold transition-transform cursor-pointer ${
             showAnnotations
-              ? 'bg-white/95 text-neutral-700 hover:bg-neutral-50'
-              : 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100'
+              ? 'bg-[#FAF8F3] text-[#15162B] hover:bg-white'
+              : 'bg-[#FFF9D6] text-[#B87A00] hover:bg-[#FFF3C2]'
           }`}
-          title={showAnnotations ? 'hide ink & highlighter annotations' : 'show ink & highlighter annotations'}
+          title={showAnnotations ? 'Hide ink & highlighter annotations' : 'Show ink & highlighter annotations'}
         >
           {showAnnotations ? (
             <>
-              <Highlighter className="w-3.5 h-3.5 text-indigo-600" />
-              <span>annotations: on</span>
+              <Highlighter className="w-4 h-4 text-[#3355FF]" />
+              <span>Annotations: on</span>
             </>
           ) : (
             <>
-              <EyeOff className="w-3.5 h-3.5 text-amber-600" />
-              <span>annotations: hidden</span>
+              <EyeOff className="w-4 h-4 text-[#D47500]" />
+              <span>Annotations: hidden</span>
             </>
           )}
         </button>
 
         {/* Canvas-Anchored Subtle Zoom Controls */}
-        <div className="hidden md:flex items-center gap-0.5 bg-white/95 backdrop-blur-sm border hairline-border rounded-xl p-1 shadow-xs text-neutral-600">
+        <div className="hidden md:flex items-center gap-1 bg-[#FAF8F3] border-2 border-[#15162B] hard-shadow-xs rounded-xl p-1 text-[#15162B]">
           <button
             onClick={handleZoomOut}
-            className="p-1 rounded-lg hover:bg-neutral-100 transition-colors cursor-pointer"
-            title="zoom out (-)"
+            className="p-1 rounded-lg hover:bg-white transition-colors cursor-pointer"
+            title="Zoom out (-)"
           >
             <ZoomOut className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={handleResetZoom}
-            className="px-1.5 py-0.5 text-[10px] font-mono hover:bg-neutral-100 rounded-md transition-colors cursor-pointer"
-            title="reset zoom (100%)"
+            className="px-1.5 py-0.5 text-xs font-mono font-bold hover:bg-white rounded-md transition-colors cursor-pointer"
+            title="Reset zoom (100%)"
           >
             {zoomLevel}%
           </button>
           <button
             onClick={handleZoomIn}
-            className="p-1 rounded-lg hover:bg-neutral-100 transition-colors cursor-pointer"
-            title="zoom in (+)"
+            className="p-1 rounded-lg hover:bg-white transition-colors cursor-pointer"
+            title="Zoom in (+)"
           >
             <ZoomIn className="w-3.5 h-3.5" />
           </button>
-          <div className="w-px h-3 bg-neutral-200 mx-0.5" />
+          <div className="w-px h-3.5 bg-[#15162B]/20 mx-0.5" />
           <button
             onClick={handleZoomToFit}
-            className="p-1 rounded-lg hover:bg-neutral-100 transition-colors cursor-pointer"
-            title="zoom to fit (shift+1)"
+            className="p-1 rounded-lg hover:bg-white transition-colors cursor-pointer"
+            title="Zoom to fit (Shift+1)"
           >
             <Maximize className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>
 
-      {/* Canvas-Anchored Action: Fork My Board / Back to Shared (bottom-right corner per DESIGN.md) */}
-      <div className="absolute bottom-4 right-16 z-20 hidden sm:block">
+      {/* Canvas-Anchored Action: Fork My Board / Back to Shared (bottom-right corner per StudySync Design) */}
+      <div className="absolute bottom-4 right-16 z-20 hidden sm:block font-sans">
         {isForked ? (
           <button
             onClick={handleSwitchToShared}
-            className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 text-white border border-indigo-700 rounded-xl text-xs font-medium hover:bg-indigo-700 shadow-xs transition-colors cursor-pointer"
-            title="return to live shared room board"
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-[#3355FF] text-white border-2 border-[#15162B] hard-shadow-xs rounded-xl text-xs font-display font-bold hover:bg-[#2545D9] transition-transform cursor-pointer"
+            title="Return to live shared room board"
           >
-            <CheckCircle2 className="w-3.5 h-3.5" />
-            <span>view shared board</span>
+            <CheckCircle2 className="w-4 h-4" />
+            <span>View shared board</span>
           </button>
         ) : (
           <button
             onClick={handleForkBoard}
             disabled={isForking}
-            className="flex items-center gap-1.5 px-3 py-2 bg-white/95 backdrop-blur-sm border hairline-border rounded-xl text-xs font-medium text-neutral-700 hover:bg-neutral-50 shadow-xs transition-colors cursor-pointer disabled:opacity-50"
-            title="fork your own private copy of this whiteboard"
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-[#FAF8F3] hover:bg-white text-[#15162B] border-2 border-[#15162B] hard-shadow-xs rounded-xl text-xs font-display font-bold transition-transform cursor-pointer disabled:opacity-50"
+            title="Fork your own private copy of this whiteboard"
           >
-            <GitFork className="w-3.5 h-3.5 text-indigo-600" />
-            <span>{isForking ? 'forking...' : 'fork my board'}</span>
+            <GitFork className="w-4 h-4 text-[#3355FF]" />
+            <span>{isForking ? 'Forking...' : 'Fork my board'}</span>
           </button>
         )}
       </div>

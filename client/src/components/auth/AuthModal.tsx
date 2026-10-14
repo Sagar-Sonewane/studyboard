@@ -59,23 +59,29 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl max-w-md w-full border hairline-border shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+    <div className="fixed inset-0 z-50 bg-[#15162B]/50 backdrop-blur-xs flex items-center justify-center p-4">
+      <div className="bg-[#FAF8F3] rounded-2xl max-w-md w-full border-2 border-[#15162B] hard-shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
         {/* Header */}
-        <div className="px-6 py-4 border-b hairline-border flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded bg-indigo-600 flex items-center justify-center text-white text-xs font-bold">
+        <div className="px-6 py-4 border-b-2 border-[#15162B] bg-[#F7F5EF] flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-[#3355FF] border-2 border-[#15162B] hard-shadow-sm flex items-center justify-center text-white font-display font-extrabold text-sm">
               SS
             </div>
-            <h2 className="text-sm font-semibold text-neutral-900">
-              {isConfigured ? (mode === 'signin' ? 'Sign in to StudySync' : 'Create an account') : 'Set active user'}
-            </h2>
+            <div>
+              <h2 className="font-display font-bold text-base text-[#15162B] leading-none">
+                {isConfigured ? (mode === 'signin' ? 'Sign in to StudySync' : 'Create an account') : 'Set active user'}
+              </h2>
+              <p className="text-[11px] text-[#444654] mt-0.5 font-medium">
+                {isConfigured ? 'Access your private whiteboard forks & rooms' : 'Simulated host profile for development'}
+              </p>
+            </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-md text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors"
+            aria-label="Close dialog"
+            className="w-8 h-8 rounded-lg border-2 border-[#15162B] bg-white hover:bg-[#FF5B4C] hover:text-white text-[#15162B] transition-colors flex items-center justify-center hard-shadow-sm active:translate-x-0.5 active:translate-y-0.5"
           >
-            <X className="w-4 h-4" />
+            <X className="w-4 h-4 stroke-[2.5]" />
           </button>
         </div>
 
@@ -84,7 +90,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
           {isConfigured ? (
             <>
               {/* Tab selector */}
-              <div className="flex border hairline-border rounded-lg p-0.5 mb-5 bg-neutral-50">
+              <div className="flex bg-white border-2 border-[#15162B] rounded-xl p-1 mb-6 hard-shadow-sm gap-1">
                 <button
                   type="button"
                   onClick={() => {
@@ -92,13 +98,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                     setError(null);
                     setSuccessMsg(null);
                   }}
-                  className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                  className={`flex-1 py-2 text-xs font-display font-bold rounded-lg transition-all ${
                     mode === 'signin'
-                      ? 'bg-white text-neutral-900 shadow-sm'
-                      : 'text-neutral-500 hover:text-neutral-900'
+                      ? 'bg-[#3355FF] text-white border-2 border-[#15162B] hard-shadow-sm'
+                      : 'text-[#444654] hover:text-[#15162B]'
                   }`}
                 >
-                  sign in
+                  Sign in
                 </button>
                 <button
                   type="button"
@@ -107,71 +113,71 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                     setError(null);
                     setSuccessMsg(null);
                   }}
-                  className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                  className={`flex-1 py-2 text-xs font-display font-bold rounded-lg transition-all ${
                     mode === 'signup'
-                      ? 'bg-white text-neutral-900 shadow-sm'
-                      : 'text-neutral-500 hover:text-neutral-900'
+                      ? 'bg-[#3355FF] text-white border-2 border-[#15162B] hard-shadow-sm'
+                      : 'text-[#444654] hover:text-[#15162B]'
                   }`}
                 >
-                  sign up
+                  Create account
                 </button>
               </div>
 
               {error && (
-                <div className="mb-4 p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-xs text-rose-700">
-                  {error}
+                <div className="mb-5 p-3 rounded-xl bg-[#FFEAE8] border-2 border-[#FF5B4C] text-xs font-medium text-[#C42616] flex items-start gap-2">
+                  <span className="font-bold">Error:</span> {error}
                 </div>
               )}
 
               {successMsg && (
-                <div className="mb-4 p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-xs text-emerald-700">
+                <div className="mb-5 p-3 rounded-xl bg-[#E6F8F0] border-2 border-[#00AA72] text-xs font-medium text-[#006C48]">
                   {successMsg}
                 </div>
               )}
 
-              <form onSubmit={handleSubmit} className="space-y-3.5">
+              <form onSubmit={handleSubmit} className="space-y-4">
                 {mode === 'signup' && (
                   <div>
-                    <label className="block text-xs font-medium text-neutral-700 mb-1">
+                    <label className="block text-xs font-bold text-[#15162B] mb-1 font-display uppercase tracking-wider">
                       Display name
                     </label>
                     <div className="relative">
-                      <UserIcon className="w-4 h-4 absolute left-3 top-2.5 text-neutral-400" />
+                      <UserIcon className="w-4 h-4 absolute left-3.5 top-3 text-[#888A98]" />
                       <input
                         type="text"
                         required
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         placeholder="Alex Parker"
-                        className="w-full pl-9 pr-3 py-2 text-xs border hairline-border rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-neutral-50 focus:bg-white transition-colors"
+                        className="w-full pl-10 pr-3.5 py-2.5 text-xs border-2 border-[#15162B] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#3355FF] bg-white hard-shadow-sm text-[#15162B] font-medium transition-all"
                       />
                     </div>
                   </div>
                 )}
 
                 <div>
-                  <label className="block text-xs font-medium text-neutral-700 mb-1">
+                  <label className="block text-xs font-bold text-[#15162B] mb-1 font-display uppercase tracking-wider">
                     Email address
                   </label>
                   <div className="relative">
-                    <Mail className="w-4 h-4 absolute left-3 top-2.5 text-neutral-400" />
+                    <Mail className="w-4 h-4 absolute left-3.5 top-3 text-[#888A98]" />
                     <input
                       type="email"
                       required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="alex@example.com"
-                      className="w-full pl-9 pr-3 py-2 text-xs border hairline-border rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-neutral-50 focus:bg-white transition-colors"
+                      className="w-full pl-10 pr-3.5 py-2.5 text-xs border-2 border-[#15162B] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#3355FF] bg-white hard-shadow-sm text-[#15162B] font-medium transition-all"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-neutral-700 mb-1">
+                  <label className="block text-xs font-bold text-[#15162B] mb-1 font-display uppercase tracking-wider">
                     Password
                   </label>
                   <div className="relative">
-                    <Lock className="w-4 h-4 absolute left-3 top-2.5 text-neutral-400" />
+                    <Lock className="w-4 h-4 absolute left-3.5 top-3 text-[#888A98]" />
                     <input
                       type="password"
                       required
@@ -179,7 +185,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••"
                       minLength={6}
-                      className="w-full pl-9 pr-3 py-2 text-xs border hairline-border rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-neutral-50 focus:bg-white transition-colors"
+                      className="w-full pl-10 pr-3.5 py-2.5 text-xs border-2 border-[#15162B] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#3355FF] bg-white hard-shadow-sm text-[#15162B] font-medium transition-all"
                     />
                   </div>
                 </div>
@@ -187,55 +193,55 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full mt-2 py-2 px-4 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-xs font-medium rounded-lg transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
+                  className="w-full mt-4 py-3 px-4 bg-[#3355FF] hover:bg-[#2544e6] text-white text-xs font-display font-bold uppercase tracking-wider rounded-xl border-2 border-[#15162B] hard-shadow hard-shadow-hover transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
                 >
                   {mode === 'signin' ? (
                     <>
-                      <LogIn className="w-3.5 h-3.5" /> sign in
+                      <LogIn className="w-4 h-4" /> Sign in
                     </>
                   ) : (
                     <>
-                      <UserPlus className="w-3.5 h-3.5" /> create account
+                      <UserPlus className="w-4 h-4" /> Create free account
                     </>
                   )}
                 </button>
               </form>
             </>
           ) : (
-            <div className="space-y-4">
-              <div className="p-3 bg-indigo-50 border border-indigo-100 rounded-lg">
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-indigo-900 mb-1">
-                  <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+            <div className="space-y-5">
+              <div className="p-4 bg-[#FFF9D6] border-2 border-[#15162B] rounded-xl hard-shadow-sm">
+                <div className="flex items-center gap-2 text-xs font-bold text-[#15162B] font-display mb-1.5 uppercase tracking-wider">
+                  <Sparkles className="w-4 h-4 text-[#3355FF]" />
                   Development Mode
                 </div>
-                <p className="text-xs text-indigo-700 leading-relaxed">
-                  Supabase environment variables are not yet loaded. You can set a simulated host user name to create rooms and test authenticated room features right away!
+                <p className="text-xs text-[#444654] leading-relaxed font-medium">
+                  Supabase environment variables are not yet configured. You can set a simulated host name to test real-time room sessions, whiteboard forking, and participant controls instantly!
                 </p>
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-neutral-700 mb-1">
+                <label className="block text-xs font-bold text-[#15162B] mb-1.5 font-display uppercase tracking-wider">
                   Host display name
                 </label>
                 <div className="relative">
-                  <UserIcon className="w-4 h-4 absolute left-3 top-2.5 text-neutral-400" />
+                  <UserIcon className="w-4 h-4 absolute left-3.5 top-3 text-[#888A98]" />
                   <input
                     type="text"
                     value={devInputName}
                     onChange={(e) => setDevInputName(e.target.value)}
                     placeholder="Enter name (e.g. Host User, Sarah)"
-                    className="w-full pl-9 pr-3 py-2 text-xs border hairline-border rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-neutral-50 focus:bg-white"
+                    className="w-full pl-10 pr-3.5 py-2.5 text-xs border-2 border-[#15162B] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#3355FF] bg-white hard-shadow-sm text-[#15162B] font-medium"
                   />
                 </div>
               </div>
 
-              <div className="flex gap-2">
+              <div>
                 <button
                   type="button"
                   onClick={handleApplyDevUser}
-                  className="flex-1 py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium rounded-lg transition-colors"
+                  className="w-full py-3 px-4 bg-[#3355FF] hover:bg-[#2544e6] text-white text-xs font-display font-bold uppercase tracking-wider rounded-xl border-2 border-[#15162B] hard-shadow hard-shadow-hover transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  save active user
+                  Save active profile
                 </button>
               </div>
             </div>

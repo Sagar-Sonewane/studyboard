@@ -98,3 +98,19 @@ code, pre {
   transition: opacity 0.15s ease-out;
 }
 
+/* Unified Design System Components */
+.panel-border {
+  border-color: #15162B;
+}
+
+.workspace-surface {
+  background-color: #FAF8F3;
+}
+
+.workspace-card {
+  background-color: #FFFFFF;
+  border: 2px solid #15162B;
+  box-shadow: 2px 2px 0px #15162B;
+  border-radius: 0.75rem;
+}
+
