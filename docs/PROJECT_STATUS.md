@@ -33,7 +33,7 @@ discrepancies" during a routine update) — don't repeat that.
 
 ## Current phase
 
-`Phase 6.6 completed (Application-Wide Design System Unification: unified the room workspace, header, 3-state participant rail, whiteboard toolbar, bottom controls, and all auth/create/join dialogs to match the StudySync brand identity established by the redesigned homepage) — ready for deployment. Phases 7/8 remain paused.`
+`Phase 6.7 in progress / deployment ready (Frontend configured for Vercel with vercel.json rewrites and wss:// dynamic derivation; Backend configured for Railway/Render with Prisma build pipeline and full Vercel CORS support). Ready for deployment linking and smoke testing. Phases 7/8 remain paused.`
 
 ## Environment status
 
@@ -147,21 +147,29 @@ discrepancies" during a routine update) — don't repeat that.
     - `JoinRoomModal.tsx`: Both the modal popup and standalone `/room/:inviteCode` route unified with active room details preview, guest name input, and error states.
   - **Verification**: Verified production build with `tsc && vite build` (zero errors) and verified in-browser rendering across landing page, modals, and room workspace.
 
+- **Phase 6.7 — Production Deployment Readiness**:
+  - **Dynamic Protocol & WebSocket Derivation** (`client/src/lib/api.ts`, `client/src/lib/yjs-sync.ts`):
+    - Ensured `API_BASE_URL`, `WS_BASE_URL`, and Yjs provider connection dynamically adapt to deployment environments.
+    - Added automatic upgrade from `ws:` to `wss:` when loaded over HTTPS (preventing browser mixed-content blocks).
+    - Added fallback derivation from `VITE_API_URL` if `VITE_WS_URL` is omitted, eliminating broken WebSocket connections across staging and production.
+  - **Vercel SPA Routing Configuration** (`client/vercel.json`):
+    - Added single-page application rewrites to prevent 404s when navigating directly to `/room/:inviteCode` or reloading a live session on Vercel.
+  - **Backend Production CORS & Build Pipeline** (`server/src/index.ts`, `server/package.json`):
+    - Updated CORS middleware to accept comma-separated origins, explicit `CORS_ORIGIN`, and automatically allow all Vercel deployment preview domains (`*.vercel.app`).
+    - Updated `server/package.json` build command to `prisma generate && tsc` so Prisma Client is properly generated in isolated Railway/Render build containers.
+
 ## Currently in progress
 
-*(none — Phase 6.6 Design System Unification complete, all components visually unified and building with zero errors)*
+*(Phase 6.7 — Deployment to Vercel (frontend) and Railway/Render (backend), followed by cross-device multiplayer smoke test)*
 
-## Files touched this session (Phase 6.6 Design System Unification)
+## Files touched this session (Phase 6.7 Deployment Preparation)
 
-- `client/src/index.css` — Added shared design system classes (`.panel-border`, `.workspace-surface`, `.workspace-card`).
-- `client/src/components/room/RoomView.tsx` — Unified 56px room header, host badges, invite code pill, and draw request toast.
-- `client/src/components/participants/ParticipantRail.tsx` — Unified hidden pill, collapsed strip, and expanded participant aside.
-- `client/src/components/whiteboard/WhiteboardToolbar.tsx` — Unified floating toolbar, active tool states, shapes flyout, and color palette.
-- `client/src/components/whiteboard/WhiteboardCanvas.tsx` — Unified canvas controls, upload action, annotation toggle, zoom controls, and board forking buttons.
-- `client/src/components/auth/AuthModal.tsx` — Unified sign-in / sign-up modal with brand tokens.
-- `client/src/components/room/CreateRoomModal.tsx` — Unified room creation form and success confirmation card.
-- `client/src/components/room/JoinRoomModal.tsx` — Unified modal and standalone join page.
-- `docs/PROJECT_STATUS.md` — Logged Phase 6.6 accomplishments.
+- `client/src/lib/api.ts` — Dynamic API and WebSocket URL resolution with HTTPS/WSS enforcement.
+- `client/src/lib/yjs-sync.ts` — Resilient Yjs WebSocket URL derivation with WSS support.
+- `client/vercel.json` — Vercel SPA rewrite configuration for deep routing (`/room/:code`).
+- `server/src/index.ts` — Comprehensive CORS configuration supporting Vercel preview and production origins.
+- `server/package.json` — Automated `prisma generate && tsc` build pipeline.
+- `docs/PROJECT_STATUS.md` — Logged deployment preparation phase.
 
 ## Known issues / things to revisit
 
@@ -170,10 +178,11 @@ discrepancies" during a routine update) — don't repeat that.
 ## Decisions / discrepancies to be aware of
 
 - The actual project folder on disk is named `studyboard`, not `studysync`.
-- **Roadmap order**: Phases 7 and 8 (Stripe billing, grace-period pause flow) are intentionally paused. Up next: **Deployment to Vercel + Railway/Render**. Do not resume Phase 7/8 without explicit go-ahead.
+- **Hosting split**: Frontend on Vercel (`client/`), Backend on Railway or Render (`server/`) for persistent WebSocket support.
+- **Roadmap order**: Phases 7 and 8 (Stripe billing, grace-period pause flow) remain paused until friend-testing validation completes.
 
 ## Next session should start with
 
-**Proceed to Deployment to Vercel + Railway/Render** per `BUILD_PROMPTS.md`.
+**Execute deployment linking on Vercel and Railway/Render, set environment variables, and perform cross-device smoke testing.**
 
 

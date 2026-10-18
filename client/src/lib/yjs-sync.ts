@@ -65,13 +65,23 @@ export function useYjsWhiteboardSync({
   }, [user]);
 
   // Compute WebSocket URL
-  const resolvedWsUrl =
-    wsUrl ||
-    (import.meta.env.VITE_WS_URL
-      ? import.meta.env.VITE_WS_URL.replace(/\/ws\/?$/, '') + '/yjs'
-      : `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${
-          window.location.hostname
-        }:4000/yjs`);
+  const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:';
+  let resolvedWsUrl = wsUrl;
+
+  if (!resolvedWsUrl) {
+    if (import.meta.env.VITE_WS_URL) {
+      resolvedWsUrl = import.meta.env.VITE_WS_URL.replace(/\/ws\/?$/, '').replace(/\/+$/, '') + '/yjs';
+    } else if (import.meta.env.VITE_API_URL) {
+      const apiUrl = import.meta.env.VITE_API_URL.replace(/\/+$/, '');
+      resolvedWsUrl = apiUrl.replace(/^http:/, 'ws:').replace(/^https:/, 'wss:') + '/yjs';
+    } else {
+      resolvedWsUrl = `${isHttps ? 'wss:' : 'ws:'}//${window.location.hostname}:4000/yjs`;
+    }
+  }
+
+  if (isHttps && resolvedWsUrl.startsWith('ws:')) {
+    resolvedWsUrl = resolvedWsUrl.replace(/^ws:/, 'wss:');
+  }
 
   const docName = isForked
     ? `studysync-forked-${forkedBoardId || roomId}-${user?.id || 'local'}`

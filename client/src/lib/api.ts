@@ -1,5 +1,35 @@
-export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
-export const WS_BASE_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:4000';
+function getResolvedApiUrl(): string {
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL.replace(/\/+$/, '');
+  }
+  return 'http://localhost:4000';
+}
+
+function getResolvedWsUrl(): string {
+  const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:';
+
+  if (import.meta.env.VITE_WS_URL) {
+    let url = import.meta.env.VITE_WS_URL.replace(/\/+$/, '');
+    if (isHttps && url.startsWith('ws:')) {
+      url = url.replace(/^ws:/, 'wss:');
+    }
+    return url;
+  }
+
+  if (import.meta.env.VITE_API_URL) {
+    const apiUrl = import.meta.env.VITE_API_URL.replace(/\/+$/, '');
+    let wsUrl = apiUrl.replace(/^http:/, 'ws:').replace(/^https:/, 'wss:');
+    if (isHttps && wsUrl.startsWith('ws:')) {
+      wsUrl = wsUrl.replace(/^ws:/, 'wss:');
+    }
+    return wsUrl;
+  }
+
+  return isHttps ? `wss://${window.location.hostname}:4000` : 'ws://localhost:4000';
+}
+
+export const API_BASE_URL = getResolvedApiUrl();
+export const WS_BASE_URL = getResolvedWsUrl();
 
 export interface HealthCheckResponse {
   status: 'healthy' | 'degraded';

@@ -15,13 +15,53 @@ import { createYjsWebSocketServer } from './ws/yjs';
 
 const app = express();
 const PORT = process.env.PORT || 4000;
-const CORS_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:5173';
+// Allowed origins configuration
+const rawCorsOrigin = process.env.CORS_ORIGIN || '';
+const configuredOrigins = rawCorsOrigin
+  .split(',')
+  .map((o) => o.trim().replace(/\/+$/, ''))
+  .filter(Boolean);
+
+const defaultDevOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'http://127.0.0.1:5173',
+  'http://127.0.0.1:3000',
+];
 
 // Middleware
 app.use(
   cors({
-    origin: CORS_ORIGIN === '*' ? '*' : [CORS_ORIGIN, 'http://localhost:5173', 'http://127.0.0.1:5173'],
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps, curl, or server-to-server)
+      if (!origin) return callback(null, true);
+
+      const normalizedOrigin = origin.replace(/\/+$/, '');
+
+      // Allow wildcard if explicitly set
+      if (rawCorsOrigin === '*') return callback(null, true);
+
+      // Check explicitly configured origins
+      if (configuredOrigins.includes(normalizedOrigin)) return callback(null, true);
+
+      // Check default dev origins
+      if (defaultDevOrigins.includes(normalizedOrigin)) return callback(null, true);
+
+      // Automatically allow all Vercel deployments (*.vercel.app)
+      try {
+        const url = new URL(normalizedOrigin);
+        if (url.hostname.endsWith('.vercel.app')) {
+          return callback(null, true);
+        }
+      } catch {
+        // invalid URL format, fall through to error
+      }
+
+      return callback(new Error(`CORS blocked for origin: ${origin}`));
+    },
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   })
 );
 app.use(express.json());
