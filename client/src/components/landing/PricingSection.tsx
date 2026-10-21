@@ -16,7 +16,7 @@ export const PricingSection: React.FC<PricingSectionProps> = ({ onStartRoom }) =
   return (
     <section
       id="pricing"
-      className="py-20 md:py-28 bg-[#F7F5EF] border-b-2 border-[#15162B] relative"
+      className="py-20 md:py-28 bg-[#F7F5EF] border-b-2 border-[#15162B] relative scroll-mt-[72px]"
     >
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6 md:px-8">
         {/* Section Header */}
@@ -26,7 +26,7 @@ export const PricingSection: React.FC<PricingSectionProps> = ({ onStartRoom }) =
             <span>TRANSPARENT, HONEST TIERS</span>
           </div>
 
-          <h2 className="font-display font-bold text-3xl sm:text-4xl md:text-5xl text-[#15162B] tracking-tight leading-[1.15]">
+          <h2 className="font-display font-bold text-3xl sm:text-4xl md:text-5xl text-[#15162B] tracking-tight leading-[1.15] [text-wrap:balance]">
             Simple plans.{' '}
             <span className="relative inline-block px-1">
               <span className="relative z-10">Guests always join free.</span>
@@ -42,7 +42,7 @@ export const PricingSection: React.FC<PricingSectionProps> = ({ onStartRoom }) =
           </p>
         </div>
 
-        {/* Pricing Cards Grid */}
+        {/* Pricing Cards Grid: Aligned tops and tightened spacing */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 items-stretch">
           {plans.map((plan) => {
             const isFree = plan.id === 'free';
@@ -52,7 +52,7 @@ export const PricingSection: React.FC<PricingSectionProps> = ({ onStartRoom }) =
                 key={plan.id}
                 className={`relative bg-white border-2 border-[#15162B] rounded-2xl md:rounded-3xl flex flex-col justify-between transition-all duration-200 ${
                   isFree
-                    ? 'hard-shadow-lg md:-translate-y-2 ring-2 ring-[#3355FF]/20'
+                    ? 'hard-shadow-lg ring-2 ring-[#3355FF]/20'
                     : 'hard-shadow'
                 }`}
               >
@@ -70,15 +70,15 @@ export const PricingSection: React.FC<PricingSectionProps> = ({ onStartRoom }) =
                   </div>
                 )}
 
-                {/* Top Half of Ticket */}
-                <div className="p-6 sm:p-8">
+                {/* Top Half of Card (Tightened dead space) */}
+                <div className="p-6 sm:p-7 pb-4">
                   <div className="flex items-baseline justify-between mb-2">
                     <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#444654]">
                       {plan.name}
                     </span>
                   </div>
 
-                  <div className="flex items-baseline gap-1.5 mb-4">
+                  <div className="flex items-baseline gap-1.5 mb-3">
                     <span className="font-display font-bold text-4xl sm:text-5xl text-[#15162B]">
                       {plan.price}
                     </span>
@@ -87,24 +87,22 @@ export const PricingSection: React.FC<PricingSectionProps> = ({ onStartRoom }) =
                     </span>
                   </div>
 
-                  <h3 className="font-display font-bold text-lg text-[#15162B] mb-2">
+                  <h3 className="font-display font-bold text-lg text-[#15162B] mb-2 [text-wrap:balance]">
                     {plan.headline}
                   </h3>
 
-                  <p className="text-sm text-[#444654] leading-relaxed mb-6">
+                  <p className="text-sm text-[#444654] leading-relaxed mb-2 font-normal">
                     {plan.description}
                   </p>
                 </div>
 
-                {/* Perforated Stub Divider */}
-                <div className="relative flex items-center px-4" aria-hidden="true">
-                  <div className="w-4 h-8 bg-[#F7F5EF] border-r-2 border-[#15162B] rounded-r-full -ml-4" />
-                  <div className="flex-1 border-b-2 border-dashed border-[#15162B]/20 mx-2" />
-                  <div className="w-4 h-8 bg-[#F7F5EF] border-l-2 border-[#15162B] rounded-l-full -mr-4" />
+                {/* Perforated Divider (Clean dashed line, continuous border without stray notches) */}
+                <div className="px-6 sm:p-7 py-0" aria-hidden="true">
+                  <div className="border-b-2 border-dashed border-[#15162B]/20" />
                 </div>
 
                 {/* Bottom Half: Features & Action Button */}
-                <div className="p-6 sm:p-8 flex flex-col justify-between flex-1 space-y-6">
+                <div className="p-6 sm:p-7 pt-5 flex flex-col justify-between flex-1 space-y-6">
                   <ul className="space-y-3" role="list">
                     {plan.features.map((feature, idx) => (
                       <li key={idx} className="flex items-start gap-2.5 text-xs sm:text-sm text-[#15162B]">
@@ -159,8 +157,8 @@ export const PricingSection: React.FC<PricingSectionProps> = ({ onStartRoom }) =
           </div>
 
           <a
-            href="mailto:hello@studysync.app?subject=StudySync%20Academic%20Inquiry"
-            className="shrink-0 min-h-[40px] px-4 py-2 bg-[#F7F5EF] hover:bg-white text-[#15162B] border-2 border-[#15162B] rounded-xl font-display font-bold text-xs inline-flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3355FF]"
+            href="mailto:support@studysync.app?subject=Education%20Tier%20Inquiry"
+            className="shrink-0 px-4 py-2.5 bg-white border-2 border-[#15162B] rounded-xl text-xs font-display font-bold text-[#15162B] hover:bg-[#F2EFE6] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3355FF]"
           >
             Contact team
           </a>

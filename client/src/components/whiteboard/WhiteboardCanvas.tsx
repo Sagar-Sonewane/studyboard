@@ -131,6 +131,13 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
     (editorInstance: Editor) => {
       onEditorMount(editorInstance);
 
+      // Force tldraw locale to English per QA requirement A
+      try {
+        editorInstance.user?.updateUserPreferences?.({ locale: 'en' });
+      } catch {
+        // ignore if not supported by current editor version
+      }
+
       // Set initial tool
       if (canDraw) {
         editorInstance.setCurrentTool('draw');

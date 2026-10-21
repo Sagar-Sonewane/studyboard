@@ -35,8 +35,8 @@ export const PLAN_LIMITS: Record<'free' | 'dayPass' | 'monthly', PricingPlan> = 
     buttonText: 'Start free',
     buttonActive: true,
     features: [
-      'Up to 5 participants per room', // Free tier cap per PRODUCT.md
-      '10MB file & document uploads',  // Free tier cap per PRODUCT.md
+      'Up to 5 participants per room',
+      '10MB file & document uploads',
       'Infinite shared whiteboard with live voice',
       'Fork private local copies of any board',
     ],
@@ -52,10 +52,10 @@ export const PLAN_LIMITS: Record<'free' | 'dayPass' | 'monthly', PricingPlan> = 
     buttonText: 'Coming soon',
     buttonActive: false, // Billing paused until Stripe integration (Phases 7/8)
     features: [
-      'More participants (expanded room size)', // TODO: define exact count before billing launch (PRODUCT.md)
-      'Larger file uploads (expanded size cap)', // TODO: define exact size before billing launch (PRODUCT.md)
-      '24-hour uninterrupted host pass',
-      'Guests still join free without accounts',
+      'Higher participant limit',
+      'Larger file upload size',
+      '24-hour uninterrupted host access',
+      'Guests join free without accounts',
     ],
   },
   monthly: {
@@ -68,9 +68,9 @@ export const PLAN_LIMITS: Record<'free' | 'dayPass' | 'monthly', PricingPlan> = 
     buttonText: 'Coming soon',
     buttonActive: false, // Billing paused until Stripe integration (Phases 7/8)
     features: [
-      'Unlimited persistent rooms',
-      'More participants & larger file uploads', // TODO: define exact limits before billing launch
-      'Cancel or pause anytime with one click',
+      'Higher participant limit',
+      'Larger file upload size',
+      'Dedicated recurring rooms',
       'All Day Pass benefits included',
     ],
   },

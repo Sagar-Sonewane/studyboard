@@ -27,7 +27,7 @@ export const FinalCtaSection: React.FC<FinalCtaSectionProps> = ({
         {/* Eyebrow Pill */}
         <div className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-white/10 border border-white/20 rounded-full text-xs font-mono font-bold text-[#FFDD33] mb-6">
           <Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
-          <span>ZERO SETUP · ZERO WAITING</span>
+          <span>ZERO SETUP · INSTANT ACCESS</span>
         </div>
 
         {/* Closing Headline */}

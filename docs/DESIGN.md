@@ -216,50 +216,27 @@ it to this spec exactly, don't freelance a new visual direction.
 
 ### Page sections, in order
 
-1. **Nav**: logo mark (small circle+checkmark SVG icon) + "StudySync"
-   wordmark, left. Center/right nav links (Features, Pricing, For teams).
-   Right: "Log in" (ghost button) + "Start a room" (primary, hard-shadow).
-2. **Hero** (asymmetric two-column, ~55/45 split):
-   - Left: eyebrow text ("for teams, founders & study groups"), oversized
-     headline ("Say it. Sketch it. Together." — three short lines, tight
-     leading, ~56px, weight 800, with the highlighter mark on "Together"),
-     one-paragraph subhead that explicitly covers both work and study use
-     cases, an audience chip row (🚀 startups / 💼 remote teams / 📚 study
-     groups), primary CTA ("Create a room →") + a no-card-needed reassurance
-     line.
-   - Right: a tilted (`rotate(2.5deg)`) mock whiteboard preview card — a
-     small illustrative SVG with a couple of circles/connector lines and a
-     mini sticky note reading something work-plausible ("roadmap v2"), plus
-     a small "forked by you" tag peeking off one corner. This doubles as
-     product proof, not pure decoration.
-3. **"Who it's for" strip**: a quiet 3-column row (plain text, NOT sticky
-   notes — deliberately lower-key than the feature section below), ink
-   top/bottom border, one line each for startups & small teams / remote &
-   WFH employees / study groups.
-4. **Features**: 3 tilted sticky notes (see signature devices above) —
-   "Talk while you draw", "Fork your own copy", "Mark up any file" — each
-   with a one-line description.
-5. **Pricing**: 3 ticket-stub cards — Free ($0), Day pass ($3, visually
-   emphasized with a filled blue header band and raised position), Monthly
-   ($9) — matching the plan structure in PRODUCT.md exactly. Subhead ties
-   each plan to a concrete use case (client pitch vs. standing team sync).
-6. **Footer CTA**: short bold restatement + primary button, no extra visual
-   noise — this section stays quiet since the hero already spent the
-   visual energy.
+1. **Nav**: logo mark (small circle+checkmark SVG icon) + "StudySync" wordmark, left. Nav links: Why (`#features`), How it works (`#how-it-works`), Use cases (`#who-its-for`), Pricing (`#pricing`). Right: "Sign in" + "Create room" (primary, hard-shadow). No duplicate join button in nav.
+2. **Hero** (asymmetric two-column layout):
+   - Left: oversized headline ("Say it. Sketch it. Together." with the signature yellow highlighter mark on "Together"), two-line subhead (~25 words), primary CTA ("Create a room →" with 4px hard shadow) + outline secondary CTA ("Join with code" with 2px ink border and NO hard shadow), single-line reassurance checks (Free tier included, Guests join without accounts, Works in any browser), and "BUILT FOR:" audience chips (Study Groups, Startups, Remote Teams).
+   - Right: authentic collaborative workspace preview resembling the real app UI — window bar with traffic lights, room metadata (`sprint-architecture · room`, `#m7k-42p`), live voice indicator, participant avatars (`S`, `J`, `A`), in-app mode switcher (`Shared` / `My copy`), single coherent scene (one checklist card with 2 of 3 done, one tilted sticky note, two collaborator cursors in open canvas margins, and a red dashed annotation circle cleanly framing an item without touching text; all text ≥ 12px), canvas bottom strip with file upload pill and 100% zoom, realistic floating toolbar, corner badges, and strict 4px hard shadow (`shadow-[4px_4px_0px_#15162B] border-2 border-[#15162B]`).
+3. **How it works**: 3 step cards ("Create your room in one click", "Share the link with your group", "Talk, sketch & solve together") with equal-height text containers so horizontal dividers and inner mock panels share the exact same baseline across all cards. Step 2 shows the real server invite code format `code: m7k-42p` and neutral link.
+4. **Core capabilities (Features)**: deep dives for voice + canvas integration ("Talk naturally while you draw"), private board forking ("Fork your own copy"), and document annotation ("Drop PDFs onto the canvas with a non‑destructive markup layer"). Non-breaking hyphens (`non‑destructive`) and `[text-wrap:balance]` on all headings. Paragraphs capped at 2 sentences + 3 short bullets. Participant count matches avatar list ("Voice room: 2 connected").
+5. **Use cases ("Built for collaboration")**: interactive tabs for Study Groups & Tutors, Startups & Builders, and Remote & Distributed Teams. Remote Teams preview shows authentic freehand sketching (diagram nodes, arrows, sticky note, cursors) rather than a retro table. No fake vote tags, "Actionable/Adopted" labels, "Live Sync" tags, or "Voice Note" cards.
+6. **Pricing**: 3 ticket cards (Free $0, Day Pass $3, Monthly Pro $9) aligned evenly at the top with continuous borders and dashed divider (no stray notch arc cutouts). Dead space above dividers tightened. Short deduplicated copy ("Higher participant limit", "Larger file upload size"). Free tier active, Day Pass and Monthly Pro marked "Coming soon" (`aria-disabled="true"`).
+7. **Footer CTA**: dark blueprint background ("Your next great idea starts in a room.") with "ZERO SETUP · INSTANT ACCESS" pill and dual action buttons.
+8. **Footer**: brand wordmark, concise description, navigation links (Why, How it works, Use cases, Pricing), legal modals (Privacy, Terms, Contact), and "Send feedback" link (`FEEDBACK_URL`).
 
 ### Copy & typography rules specific to this page
 
-- **Container width**: all sections (nav, hero, strip, features, pricing, footer CTA, footer) share a single `max-width: 1200px` centered container with consistent padding (`px-4 sm:px-6 md:px-8`) and section padding (`py-16 md:py-24`).
-- **Typography usage**: Monospace is reserved strictly for short uppercase eyebrow labels and tiny tags (min 12px, letter-spaced). All body text, descriptions, helper lines, and price units use the sans body font (`Inter`).
-- **Contrast**: Body text and secondary copy use `#444654` (darkened from `#6B6D7A`) to guarantee WCAG AA > 4.5:1 contrast against the `#F7F5EF` cream paper background.
-- **Button hierarchy**: "Create a room →" keeps the signature hard shadow; "Join with link / code" is an outline button with no shadow.
-- **Paid tiers status**: Because Stripe billing is paused (Phases 7/8), Day Pass ($3) and Monthly Pro ($9) buttons render in a muted, non-clickable "Coming soon" state (`aria-disabled="true"`). "Start free" remains active.
-- **Footer essentials**: Includes Privacy, Terms, Contact modals, configurable "Send feedback" link (`FEEDBACK_URL`), and "© 2026 StudySync".
-- Audience-neutral by default — don't write a page that reads as
-  exclusively for students or exclusively for professionals. The chip row
-  is how people self-identify, not separate hero variants.
-- Keep sentence case, no exclamation marks, consistent with the rest of
-  the product's copy style.
+- **Container width**: all sections share a single `max-width: 1200px` centered container with consistent padding (`px-4 sm:px-6 md:px-8`) and section padding (`py-20 md:py-28`).
+- **Typography usage**: Monospace is reserved strictly for short uppercase eyebrow labels and tiny tags (min 12px, letter-spaced). All body text, descriptions, helper lines, and price units use the sans body font (`Inter`). Headings use `Space Grotesk` with `[text-wrap:balance]`.
+- **Contrast**: Body text and secondary copy use `#444654` to guarantee WCAG AA > 4.5:1 contrast against `#F7F5EF` paper background.
+- **Button hierarchy**: "Create a room →" keeps the signature 4px hard shadow; "Join with code" is strictly an outline button with NO shadow.
+- **Jargon ban**: Developer jargon and technical buzzwords ("WebRTC", "CRDT", "master canvas", "image shape", "bindings", "client-side", "low-latency", "crystal clear", "battery-friendly", "no screen-share lag", "zero waiting", "secure study room") are strictly forbidden across all copy and mock previews.
+- **Accessibility & Decorative mocks**: All illustrative UI preview cards and diagrams carry `aria-hidden="true"` with non-focusable buttons (`tabIndex={-1}`) to prevent keyboard focus traps.
+- **Paid tiers status**: Day Pass ($3) and Monthly Pro ($9) render in a muted, non-clickable "Coming soon" state (`aria-disabled="true"`). "Start free" remains active.
+- **Audience-neutral by default**: Speaks to founders, remote teams, and students with equal relevance. Clean "BUILT FOR:" chips for self-identification.
 
 ### Routing (how this page fits into the app's navigation)
 

@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { LogOut, Menu, X, ArrowRight, KeyRound } from 'lucide-react';
+import { LogOut, Menu, X, ArrowRight } from 'lucide-react';
 
 interface LandingHeaderProps {
   onStartRoom: () => void;
-  onJoinCode: () => void;
+  onJoinCode?: () => void;
   onLogin: () => void;
   onSignOut?: () => void;
   user?: { email?: string; id?: string } | null;
@@ -12,7 +12,6 @@ interface LandingHeaderProps {
 
 export const LandingHeader: React.FC<LandingHeaderProps> = ({
   onStartRoom,
-  onJoinCode,
   onLogin,
   onSignOut,
   user,
@@ -21,9 +20,8 @@ export const LandingHeader: React.FC<LandingHeaderProps> = ({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navLinks = [
-    { label: 'Why StudySync', href: '#problem' },
+    { label: 'Why', href: '#features' },
     { label: 'How it works', href: '#how-it-works' },
-    { label: 'Features', href: '#features' },
     { label: 'Use cases', href: '#who-its-for' },
     { label: 'Pricing', href: '#pricing' },
   ];
@@ -72,16 +70,8 @@ export const LandingHeader: React.FC<LandingHeaderProps> = ({
           ))}
         </nav>
 
-        {/* Right Action Controls */}
+        {/* Right Action Controls: Sign in & One primary Create room button */}
         <div className="flex items-center gap-2.5 sm:gap-3">
-          <button
-            onClick={onJoinCode}
-            className="hidden sm:inline-flex min-h-[40px] px-3 py-1.5 text-xs font-display font-bold text-[#15162B] hover:text-[#3355FF] border border-[#15162B]/20 hover:border-[#15162B] bg-white rounded-lg transition-colors cursor-pointer items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3355FF]"
-          >
-            <KeyRound className="w-3.5 h-3.5" aria-hidden="true" />
-            <span>Join room</span>
-          </button>
-
           {user ? (
             <div className="flex items-center gap-2">
               <span className="hidden xl:inline-block text-xs font-mono text-[#444654] max-w-[140px] truncate">
@@ -101,7 +91,7 @@ export const LandingHeader: React.FC<LandingHeaderProps> = ({
           ) : (
             <button
               onClick={onLogin}
-              className="hidden sm:inline-flex min-h-[40px] px-3 py-1.5 text-xs font-display font-bold text-[#15162B] hover:text-[#3355FF] transition-colors cursor-pointer items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3355FF] rounded-lg"
+              className="min-h-[40px] px-3.5 py-1.5 text-xs font-display font-bold text-[#15162B] hover:text-[#3355FF] transition-colors cursor-pointer items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3355FF] rounded-lg"
             >
               Sign in
             </button>
@@ -146,12 +136,12 @@ export const LandingHeader: React.FC<LandingHeaderProps> = ({
               <button
                 onClick={() => {
                   setMobileMenuOpen(false);
-                  onJoinCode();
+                  onStartRoom();
                 }}
-                className="w-full min-h-[44px] px-4 py-2 bg-white text-[#15162B] font-display font-bold text-sm rounded-lg border-2 border-[#15162B] flex items-center justify-center gap-2"
+                className="w-full min-h-[44px] px-4 py-2 bg-[#3355FF] text-white font-display font-bold text-sm rounded-lg border-2 border-[#15162B] hard-shadow-sm flex items-center justify-center gap-2"
               >
-                <KeyRound className="w-4 h-4 text-[#3355FF]" />
-                <span>Join with invite code</span>
+                <span>Create room</span>
+                <ArrowRight className="w-4 h-4" />
               </button>
 
               {!user && (

@@ -40,22 +40,22 @@ export const LandingFooter: React.FC = () => {
             {/* Nav & Legal Links */}
             <div className="flex flex-wrap items-center gap-6 text-sm text-[#444654]">
               <a
-                href="#problem"
+                href="#features"
                 className="hover:text-[#15162B] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3355FF] rounded"
               >
-                Why StudySync
+                Why
               </a>
               <a
                 href="#how-it-works"
                 className="hover:text-[#15162B] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3355FF] rounded"
               >
-                Workflow
+                How it works
               </a>
               <a
-                href="#features"
+                href="#who-its-for"
                 className="hover:text-[#15162B] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3355FF] rounded"
               >
-                Features
+                Use cases
               </a>
               <a
                 href="#pricing"
@@ -95,7 +95,7 @@ export const LandingFooter: React.FC = () => {
               className="inline-flex items-center gap-1.5 font-bold text-[#3355FF] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3355FF] rounded"
             >
               <MessageSquare className="w-3.5 h-3.5" aria-hidden="true" />
-              <span>Share feedback with founders</span>
+              <span>Send feedback</span>
             </a>
           </div>
         </div>
