@@ -15,7 +15,8 @@ export type VoiceConnectionState =
   | 'connecting'
   | 'connected'
   | 'reconnecting'
-  | 'error'
+  | 'retrying'
+  | 'failed'
   | 'fallback';
 
 export interface ParticipantAudioInfo {
@@ -49,12 +50,17 @@ export function useLiveKitVoice({
   const [voiceStatus, setVoiceStatus] = useState<VoiceConnectionState>('disconnected');
   const [isMuted, setIsMuted] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isListenOnly, setIsListenOnly] = useState(false);
+  const [needsAudioClick, setNeedsAudioClick] = useState(false);
   const [speakingIdentities, setSpeakingIdentities] = useState<Set<string>>(new Set());
   const [mutedIdentities, setMutedIdentities] = useState<Set<string>>(new Set());
   const [audioError, setAudioError] = useState<string | null>(null);
 
   const roomRef = useRef<Room | null>(null);
   const attachedAudioElements = useRef<Map<string, HTMLMediaElement>>(new Map());
+  const retryCountRef = useRef(0);
+  const retryTimeoutRef = useRef<any>(null);
+  const maxRetries = 3;
 
   // Clean up audio elements
   const cleanupAudioElements = useCallback(() => {
@@ -72,6 +78,10 @@ export function useLiveKitVoice({
 
   // Disconnect from LiveKit
   const disconnectVoice = useCallback(async () => {
+    if (retryTimeoutRef.current) {
+      clearTimeout(retryTimeoutRef.current);
+      retryTimeoutRef.current = null;
+    }
     if (roomRef.current) {
       try {
         await roomRef.current.disconnect();
@@ -83,11 +93,18 @@ export function useLiveKitVoice({
     cleanupAudioElements();
     setVoiceStatus('disconnected');
     setIsSpeaking(false);
+    setIsListenOnly(false);
+    setNeedsAudioClick(false);
     setSpeakingIdentities(new Set());
   }, [cleanupAudioElements]);
 
   // Connect to LiveKit room
   const connectVoice = useCallback(async () => {
+    if (retryTimeoutRef.current) {
+      clearTimeout(retryTimeoutRef.current);
+      retryTimeoutRef.current = null;
+    }
+
     if (!token || !serverUrl) {
       return;
     }
@@ -100,12 +117,16 @@ export function useLiveKitVoice({
     }
 
     try {
-      setVoiceStatus('connecting');
+      setVoiceStatus((prev) => (prev === 'retrying' ? 'retrying' : 'connecting'));
       setAudioError(null);
 
       // Disconnect existing if any
       if (roomRef.current) {
-        await roomRef.current.disconnect();
+        try {
+          await roomRef.current.disconnect();
+        } catch {
+          // ignore
+        }
       }
 
       const room = createLiveKitRoom();
@@ -184,6 +205,7 @@ export function useLiveKitVoice({
 
       room.on(RoomEvent.Reconnected, () => {
         setVoiceStatus('connected');
+        retryCountRef.current = 0;
       });
 
       room.on(RoomEvent.Disconnected, () => {
@@ -191,30 +213,71 @@ export function useLiveKitVoice({
         cleanupAudioElements();
       });
 
+      // Monitor browser autoplay policy
+      room.on(RoomEvent.AudioPlaybackStatusChanged, () => {
+        setNeedsAudioClick(!room.canPlaybackAudio);
+      });
+
       // Connect to LiveKit server
       await room.connect(serverUrl, token);
+      retryCountRef.current = 0;
 
-      // Enable local microphone by default
+      // Check initial audio playback status
+      if (!room.canPlaybackAudio) {
+        setNeedsAudioClick(true);
+      }
+
+      // Enable local microphone by default; fall back gracefully to listen-only if permission denied
       try {
         await room.localParticipant.setMicrophoneEnabled(true);
         setIsMuted(false);
+        setIsListenOnly(false);
       } catch (micErr: any) {
-        console.warn('[LiveKit Hook] Microphone access not granted or unavailable:', micErr);
+        console.warn('[LiveKit Hook] Microphone access denied or unavailable; connected in listen-only mode:', micErr);
         setIsMuted(true);
+        setIsListenOnly(true);
       }
 
       setVoiceStatus('connected');
       console.log(`[LiveKit Hook] Connected to voice room: ${roomId} as ${participantId}`);
     } catch (err: any) {
       console.error('[LiveKit Hook] Connection error:', err);
-      setAudioError(err.message || 'Failed to connect to voice');
-      setVoiceStatus('error');
+      if (retryCountRef.current < maxRetries) {
+        retryCountRef.current += 1;
+        const backoffMs = Math.min(1000 * Math.pow(2, retryCountRef.current - 1), 6000);
+        setVoiceStatus('retrying');
+        setAudioError(`Retrying voice connection (attempt ${retryCountRef.current}/${maxRetries})...`);
+        retryTimeoutRef.current = setTimeout(() => {
+          connectVoice();
+        }, backoffMs);
+      } else {
+        setAudioError(err.message || 'Failed to connect to voice');
+        setVoiceStatus('failed');
+      }
     }
   }, [token, serverUrl, isConfigured, roomId, participantId, cleanupAudioElements, onSpeakingChange, onMuteChange]);
 
+  // User click action to unlock browser audio playback
+  const startAudioPlayback = useCallback(async () => {
+    if (roomRef.current) {
+      try {
+        await roomRef.current.startAudio();
+        setNeedsAudioClick(!roomRef.current.canPlaybackAudio);
+      } catch (err) {
+        console.error('[LiveKit Hook] Failed to start audio playback on click:', err);
+      }
+    }
+  }, []);
+
+  // Manual retry connection
+  const retryVoice = useCallback(() => {
+    retryCountRef.current = 0;
+    connectVoice();
+  }, [connectVoice]);
+
   // Toggle local mute
   const toggleMute = useCallback(async () => {
-    if (voiceStatus === 'connected' && roomRef.current) {
+    if (voiceStatus === 'connected' && roomRef.current && !isListenOnly) {
       const nextMuteState = !isMuted;
       try {
         await roomRef.current.localParticipant.setMicrophoneEnabled(!nextMuteState);
@@ -224,19 +287,19 @@ export function useLiveKitVoice({
         console.error('[LiveKit Hook] Failed to toggle mic:', err);
       }
     } else {
-      // Fallback or offline toggle
+      // Fallback or listen-only toggle
       setIsMuted((prev) => {
         const next = !prev;
         onMuteChange?.(next);
         return next;
       });
     }
-  }, [voiceStatus, isMuted, onMuteChange]);
+  }, [voiceStatus, isMuted, isListenOnly, onMuteChange]);
 
   // Set explicit mute
   const setMicrophoneMuted = useCallback(
     async (muted: boolean) => {
-      if (voiceStatus === 'connected' && roomRef.current) {
+      if (voiceStatus === 'connected' && roomRef.current && !isListenOnly) {
         try {
           await roomRef.current.localParticipant.setMicrophoneEnabled(!muted);
           setIsMuted(muted);
@@ -249,7 +312,7 @@ export function useLiveKitVoice({
         onMuteChange?.(muted);
       }
     },
-    [voiceStatus, onMuteChange]
+    [voiceStatus, isListenOnly, onMuteChange]
   );
 
   // Auto connect on mount / prop update
@@ -268,10 +331,14 @@ export function useLiveKitVoice({
     isConnected: voiceStatus === 'connected' || voiceStatus === 'fallback',
     isMuted,
     isSpeaking,
+    isListenOnly,
+    needsAudioClick,
+    startAudioPlayback,
     speakingIdentities,
     mutedIdentities,
     audioError,
     connectVoice,
+    retryVoice,
     disconnectVoice,
     toggleMute,
     setMicrophoneMuted,

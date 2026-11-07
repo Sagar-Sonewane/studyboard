@@ -26,6 +26,10 @@ interface ParticipantRailProps {
   isMuted: boolean;
   isSpeaking: boolean;
   voiceStatus: VoiceConnectionState;
+  isListenOnly?: boolean;
+  needsAudioClick?: boolean;
+  onStartAudio?: () => void;
+  onRetryVoice?: () => void;
   speakingIdentities?: Set<string>;
   mutedIdentities?: Set<string>;
   onToggleMute: () => void;
@@ -42,6 +46,10 @@ export const ParticipantRail: React.FC<ParticipantRailProps> = ({
   isMuted,
   isSpeaking,
   voiceStatus,
+  isListenOnly = false,
+  needsAudioClick = false,
+  onStartAudio,
+  onRetryVoice,
   speakingIdentities = new Set(),
   mutedIdentities = new Set(),
   onToggleMute,
@@ -357,6 +365,18 @@ export const ParticipantRail: React.FC<ParticipantRailProps> = ({
 
       {/* Call Controls anchored at bottom of rail */}
       <div className="p-3.5 border-t-2 border-[#15162B] bg-[#FAF8F3] flex flex-col gap-2.5">
+        {/* Autoplay unlock prompt if browser requires user gesture */}
+        {needsAudioClick && onStartAudio && (
+          <button
+            onClick={onStartAudio}
+            className="w-full py-2 px-3 bg-[#FFDD33] hover:bg-[#FFD41A] text-[#15162B] border-2 border-[#15162B] hard-shadow-xs rounded-xl text-xs font-display font-extrabold flex items-center justify-center gap-1.5 cursor-pointer animate-bounce"
+            title="Browser blocked audio autoplay. Click to enable room voice."
+          >
+            <Volume2 className="w-4 h-4 text-[#15162B]" />
+            <span>Join voice (enable audio)</span>
+          </button>
+        )}
+
         {/* Voice status indicator badge */}
         <div className="flex items-center justify-between text-xs px-1 text-[#444654] font-mono">
           <span className="flex items-center gap-1.5">
@@ -364,27 +384,40 @@ export const ParticipantRail: React.FC<ParticipantRailProps> = ({
               className={`w-2 h-2 rounded-full ${
                 voiceStatus === 'connected'
                   ? 'bg-[#00AA72] animate-pulse'
-                  : voiceStatus === 'connecting' || voiceStatus === 'reconnecting'
+                  : voiceStatus === 'connecting' || voiceStatus === 'reconnecting' || voiceStatus === 'retrying'
                   ? 'bg-[#FFDD33] animate-pulse'
                   : voiceStatus === 'fallback'
                   ? 'bg-[#3355FF]'
-                  : 'bg-[#8F91A0]'
+                  : 'bg-[#FF5B4C]'
               }`}
             />
             <span className="font-bold text-[#15162B]">
               {voiceStatus === 'connected'
-                ? 'Voice live'
+                ? isListenOnly
+                  ? 'Listen-only (mic blocked)'
+                  : 'Voice live'
                 : voiceStatus === 'connecting'
                 ? 'Connecting...'
                 : voiceStatus === 'reconnecting'
                 ? 'Reconnecting...'
+                : voiceStatus === 'retrying'
+                ? 'Retrying voice...'
                 : voiceStatus === 'fallback'
                 ? 'Simulated voice'
                 : 'Voice offline'}
             </span>
           </span>
 
-          {onToggleSimulateSpeak && (
+          {voiceStatus === 'failed' && onRetryVoice && (
+            <button
+              onClick={onRetryVoice}
+              className="text-[10px] px-2 py-0.5 rounded-md bg-[#FF5B4C] text-white font-bold cursor-pointer hover:bg-[#E0483A]"
+            >
+              Retry
+            </button>
+          )}
+
+          {voiceStatus !== 'failed' && onToggleSimulateSpeak && (
             <button
               onClick={onToggleSimulateSpeak}
               className={`text-[10px] px-2 py-0.5 rounded-md border border-[#15162B] font-bold cursor-pointer ${
@@ -403,7 +436,8 @@ export const ParticipantRail: React.FC<ParticipantRailProps> = ({
         <div className="flex items-center justify-between gap-2">
           <button
             onClick={onToggleMute}
-            className={`flex-1 py-2 px-3 rounded-xl font-display font-bold text-xs border-2 border-[#15162B] hard-shadow-xs transition-transform flex items-center justify-center gap-1.5 cursor-pointer ${
+            disabled={isListenOnly}
+            className={`flex-1 py-2 px-3 rounded-xl font-display font-bold text-xs border-2 border-[#15162B] hard-shadow-xs transition-transform flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
               isMuted
                 ? 'bg-[#FFE3E0] text-[#FF5B4C] hover:bg-[#FFDAD5]'
                 : 'bg-[#3355FF] text-white hover:bg-[#2545D9]'
@@ -412,7 +446,7 @@ export const ParticipantRail: React.FC<ParticipantRailProps> = ({
             {isMuted ? (
               <>
                 <MicOff className="w-3.5 h-3.5" />
-                <span>Unmute mic</span>
+                <span>{isListenOnly ? 'Mic blocked' : 'Unmute mic'}</span>
               </>
             ) : (
               <>

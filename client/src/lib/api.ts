@@ -67,6 +67,7 @@ export interface JoinRoomResponse {
   roomId: string;
   roomName: string;
   isHost: boolean;
+  canDraw?: boolean;
   user?: {
     id: string;
     displayName: string;

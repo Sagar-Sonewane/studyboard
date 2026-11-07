@@ -5,10 +5,10 @@ import { CreateRoomModal } from './components/room/CreateRoomModal';
 import { JoinRoomModal } from './components/room/JoinRoomModal';
 import { RoomView } from './components/room/RoomView';
 import { LandingPage } from './pages/LandingPage';
-import { RoomDetails, JoinRoomResponse } from './lib/api';
+import { RoomDetails, JoinRoomResponse, joinRoom } from './lib/api';
 
 function AppContent() {
-  const { user, displayName, signOut } = useAuth();
+  const { user, token, displayName, signOut } = useAuth();
 
   // Modals
   const [authModalOpen, setAuthModalOpen] = useState(false);
@@ -45,13 +45,15 @@ function AppContent() {
   }, [user, pendingAction]);
 
   // Handle room created & immediate entry
-  const handleRoomCreated = (room: RoomDetails) => {
+  const handleRoomCreated = async (room: RoomDetails) => {
     setActiveRoom(room);
+    // Optimistic entry so whiteboard mounts immediately
     setActiveSession({
-      participantId: 'host-session',
+      participantId: user?.id || 'host-session',
       roomId: room.id,
       roomName: room.name,
       isHost: true,
+      canDraw: true,
       user: {
         id: user?.id || 'host-id',
         displayName: displayName || 'Host',
@@ -59,6 +61,18 @@ function AppContent() {
       },
       joinedAt: new Date().toISOString(),
     });
+
+    // Obtain confirmed participant session and LiveKit voice token
+    try {
+      const joinData = await joinRoom(room.id, { token });
+      setActiveSession({
+        ...joinData,
+        isHost: true,
+        canDraw: true,
+      });
+    } catch (err) {
+      console.error('[App] Failed to auto-join created room for LiveKit voice token:', err);
+    }
   };
 
   // Handle room joined

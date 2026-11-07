@@ -16,13 +16,18 @@ export interface YjsSyncOptions {
   wsUrl?: string;
 }
 
+export type YjsSyncStatus = 'connecting' | 'connected' | 'reconnecting' | 'disconnected' | 'error';
+
 export interface YjsSyncState {
+  status: YjsSyncStatus;
   isConnected: boolean;
   isSynced: boolean;
   peerCount: number;
   doc: Y.Doc | null;
   provider: WebsocketProvider | null;
   hostCamera: { x: number; y: number; z: number } | null;
+  reconnect?: () => void;
+  errorMessage?: string | null;
 }
 
 /**
@@ -47,8 +52,9 @@ export function useYjsWhiteboardSync({
 }: YjsSyncOptions) {
   const [editor, setEditor] = useState<Editor | null>(null);
   const [syncState, setSyncState] = useState<YjsSyncState>({
+    status: isForked ? 'connected' : 'connecting',
     isConnected: false,
-    isSynced: false,
+    isSynced: isForked,
     peerCount: 1,
     doc: null,
     provider: null,
@@ -66,16 +72,19 @@ export function useYjsWhiteboardSync({
 
   // Compute WebSocket URL
   const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:';
-  let resolvedWsUrl = wsUrl;
+  let resolvedWsUrl: string = wsUrl || '';
 
   if (!resolvedWsUrl) {
-    if (import.meta.env.VITE_WS_URL) {
+    if (import.meta.env.VITE_YJS_WS_URL) {
+      resolvedWsUrl = import.meta.env.VITE_YJS_WS_URL.replace(/\/+$/, '');
+    } else if (import.meta.env.VITE_WS_URL) {
       resolvedWsUrl = import.meta.env.VITE_WS_URL.replace(/\/ws\/?$/, '').replace(/\/+$/, '') + '/yjs';
     } else if (import.meta.env.VITE_API_URL) {
       const apiUrl = import.meta.env.VITE_API_URL.replace(/\/+$/, '');
       resolvedWsUrl = apiUrl.replace(/^http:/, 'ws:').replace(/^https:/, 'wss:') + '/yjs';
     } else {
-      resolvedWsUrl = `${isHttps ? 'wss:' : 'ws:'}//${window.location.hostname}:4000/yjs`;
+      const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+      resolvedWsUrl = `${isHttps ? 'wss:' : 'ws:'}//${host}:4000/yjs`;
     }
   }
 
@@ -87,6 +96,22 @@ export function useYjsWhiteboardSync({
     ? `studysync-forked-${forkedBoardId || roomId}-${user?.id || 'local'}`
     : `studysync-room-${roomId}`;
 
+  // Manual reconnect helper
+  const handleReconnect = useCallback(() => {
+    if (providerRef.current) {
+      setSyncState((prev) => ({ ...prev, status: 'connecting', errorMessage: null }));
+      try {
+        providerRef.current.connect();
+      } catch (err: any) {
+        setSyncState((prev) => ({
+          ...prev,
+          status: 'error',
+          errorMessage: err.message || 'Failed to reconnect',
+        }));
+      }
+    }
+  }, []);
+
   // 1. Initialize Y.Doc & WebsocketProvider (stable lifecycle per roomId/board)
   useEffect(() => {
     if (!roomId) return;
@@ -97,6 +122,12 @@ export function useYjsWhiteboardSync({
     let provider: WebsocketProvider | null = null;
 
     if (!isForked) {
+      setSyncState((prev) => ({
+        ...prev,
+        status: 'connecting',
+        reconnect: handleReconnect,
+      }));
+
       provider = new WebsocketProvider(resolvedWsUrl, docName, doc, {
         connect: true,
       });
@@ -112,16 +143,28 @@ export function useYjsWhiteboardSync({
       }
 
       provider.on('status', (event: { status: 'connected' | 'connecting' | 'disconnected' }) => {
-        setSyncState((prev) => ({
-          ...prev,
-          isConnected: event.status === 'connected',
-        }));
+        setSyncState((prev) => {
+          let newStatus: YjsSyncStatus = 'connecting';
+          if (event.status === 'connected') {
+            newStatus = 'connected';
+          } else if (event.status === 'disconnected') {
+            newStatus = prev.isConnected ? 'reconnecting' : 'disconnected';
+          }
+          return {
+            ...prev,
+            status: newStatus,
+            isConnected: event.status === 'connected',
+            reconnect: handleReconnect,
+          };
+        });
       });
 
       provider.on('sync', (synced: boolean) => {
         setSyncState((prev) => ({
           ...prev,
           isSynced: synced,
+          status: synced ? 'connected' : prev.status,
+          reconnect: handleReconnect,
         }));
       });
 
@@ -141,16 +184,19 @@ export function useYjsWhiteboardSync({
           ...prev,
           peerCount: states ? states.size : 1,
           hostCamera: currentHostCamera,
+          reconnect: handleReconnect,
         }));
       });
     } else {
       setSyncState({
+        status: 'connected',
         isConnected: false,
         isSynced: true,
         peerCount: 1,
         doc,
         provider: null,
         hostCamera: null,
+        reconnect: handleReconnect,
       });
     }
 
@@ -158,6 +204,7 @@ export function useYjsWhiteboardSync({
       ...prev,
       doc,
       provider,
+      reconnect: handleReconnect,
     }));
 
     return () => {
@@ -168,7 +215,7 @@ export function useYjsWhiteboardSync({
       doc.destroy();
       docRef.current = null;
     };
-  }, [roomId, isForked, docName, resolvedWsUrl]);
+  }, [roomId, isForked, docName, resolvedWsUrl, handleReconnect]);
 
   // 2. Separate lightweight effect to update user info in awareness without tearing down Y.Doc
   useEffect(() => {

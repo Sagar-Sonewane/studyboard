@@ -1,5 +1,5 @@
-import React, { useState, useCallback } from 'react';
-import { RoomDetails, JoinRoomResponse } from '../../lib/api';
+import React, { useState, useCallback, useEffect } from 'react';
+import { RoomDetails, JoinRoomResponse, fetchLiveKitToken } from '../../lib/api';
 import { useRoomPresence } from '../../hooks/use-room-presence';
 import { useLiveKitVoice } from '../../hooks/use-livekit-voice';
 import { ParticipantRail } from '../participants/ParticipantRail';
@@ -15,6 +15,7 @@ import {
   Hand,
   CheckCircle,
   XCircle,
+  Volume2,
 } from 'lucide-react';
 
 interface RoomViewProps {
@@ -57,20 +58,47 @@ export const RoomView: React.FC<RoomViewProps> = ({ room, session, onLeave }) =>
     isHost: session.isHost,
   });
 
+  // Dynamic LiveKit token state for fallback on-demand fetch
+  const [activeVoiceToken, setActiveVoiceToken] = useState<string | undefined>(session.livekitToken);
+  const [activeVoiceUrl, setActiveVoiceUrl] = useState<string | undefined>(session.livekitUrl);
+
+  // If token is missing on entry, fetch it asynchronously
+  useEffect(() => {
+    if (!activeVoiceToken && room.id) {
+      console.log('[RoomView] LiveKit voice token not provided in session; fetching token on entry...');
+      fetchLiveKitToken(room.id, {
+        participantId: session.participantId,
+        displayName: participantName,
+        token: localStorage.getItem('auth_token'),
+      })
+        .then((res) => {
+          setActiveVoiceToken(res.token);
+          setActiveVoiceUrl(res.serverUrl);
+        })
+        .catch((err) => {
+          console.warn('[RoomView] Failed to retrieve LiveKit token on-demand:', err);
+        });
+    }
+  }, [activeVoiceToken, room.id, session.participantId, participantName]);
+
   // 2. LiveKit Realtime Voice
   const {
     voiceStatus,
     isConnected: isVoiceConnected,
     isMuted: isLiveKitMuted,
     isSpeaking: isLiveKitSpeaking,
+    isListenOnly,
+    needsAudioClick,
+    startAudioPlayback,
     speakingIdentities,
     mutedIdentities,
     toggleMute: toggleLiveKitMute,
+    retryVoice,
   } = useLiveKitVoice({
     roomId: room.id,
     participantId: session.participantId,
-    token: session.livekitToken,
-    serverUrl: session.livekitUrl,
+    token: activeVoiceToken || session.livekitToken,
+    serverUrl: activeVoiceUrl || session.livekitUrl,
     isConfigured: session.isLiveKitConfigured ?? true,
     autoJoin: true,
   });
@@ -247,6 +275,20 @@ export const RoomView: React.FC<RoomViewProps> = ({ room, session, onLeave }) =>
         </div>
       )}
 
+      {/* Floating Prompt for Browser Audio Playback Permission */}
+      {needsAudioClick && (
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-40 animate-in fade-in zoom-in-95">
+          <button
+            onClick={startAudioPlayback}
+            className="flex items-center gap-2 px-4 py-2 bg-[#FFDD33] hover:bg-[#FFD41A] text-[#15162B] border-2 border-[#15162B] hard-shadow-md rounded-2xl text-xs font-display font-extrabold cursor-pointer animate-pulse"
+            title="Click to hear room audio"
+          >
+            <Volume2 className="w-4 h-4 text-[#15162B]" />
+            <span>Click to enable audio / join voice</span>
+          </button>
+        </div>
+      )}
+
       {/* Main Studio Area */}
       <div className="flex-1 flex overflow-hidden relative">
         {/* Left Rail: 3-state Participant Rail (hidden on mobile screen, accessible via bottom bar) */}
@@ -258,6 +300,10 @@ export const RoomView: React.FC<RoomViewProps> = ({ room, session, onLeave }) =>
             isMuted={currentMuted}
             isSpeaking={currentSpeaking}
             voiceStatus={voiceStatus}
+            isListenOnly={isListenOnly}
+            needsAudioClick={needsAudioClick}
+            onStartAudio={startAudioPlayback}
+            onRetryVoice={retryVoice}
             speakingIdentities={speakingIdentities}
             mutedIdentities={mutedIdentities}
             onToggleMute={handleToggleMute}

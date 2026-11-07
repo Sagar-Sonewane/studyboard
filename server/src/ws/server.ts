@@ -145,7 +145,28 @@ function handleSocketLeave(ws: WebSocket) {
 export function setupPresenceWebSocketServer(): WebSocketServer {
   const wss = new WebSocketServer({ noServer: true });
 
+  // Keep-alive heartbeat interval every 30s to keep cloud reverse proxies from dropping idle sockets
+  const interval = setInterval(() => {
+    wss.clients.forEach((client: any) => {
+      if (client.isAlive === false) {
+        console.log('[Presence WS] Client failed ping-pong keep-alive check; terminating socket');
+        return client.terminate();
+      }
+      client.isAlive = false;
+      client.ping();
+    });
+  }, 30000);
+
+  wss.on('close', () => {
+    clearInterval(interval);
+  });
+
   wss.on('connection', (ws: WebSocket, req) => {
+    (ws as any).isAlive = true;
+    ws.on('pong', () => {
+      (ws as any).isAlive = true;
+    });
+
     const ip = req.socket.remoteAddress;
     console.log(`[WS Presence] Client connected from ${ip}`);
 

@@ -546,18 +546,44 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
         </div>
       ) : (
         /* Top Status Indicator & Follow-Host Controls for Shared Board */
-        <div className="absolute top-3.5 left-1/2 -translate-x-1/2 z-30 hidden sm:flex items-center gap-2 font-sans">
+        <div className="absolute top-3.5 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 font-sans max-w-[90vw] overflow-x-auto">
           {/* Live Sync Status */}
-          <div className="flex items-center gap-2 px-3 py-1 bg-[#FAF8F3] border-2 border-[#15162B] hard-shadow-xs rounded-full text-xs font-mono font-bold text-[#15162B]">
-            {syncState.isConnected ? (
+          <div
+            className={`flex items-center gap-2 px-3 py-1 border-2 border-[#15162B] hard-shadow-xs rounded-full text-xs font-mono font-bold ${
+              syncState.isConnected && syncState.isSynced
+                ? 'bg-[#FAF8F3] text-[#15162B]'
+                : syncState.status === 'reconnecting' || syncState.status === 'connecting'
+                ? 'bg-[#FFF9D6] text-[#B87A00]'
+                : 'bg-[#FFE3E0] text-[#FF5B4C]'
+            }`}
+          >
+            {syncState.isConnected && syncState.isSynced ? (
               <>
-                <div className="w-2 h-2 rounded-full bg-[#00AA72] animate-pulse" />
-                <span>Multiplayer live</span>
+                <div className="w-2 h-2 rounded-full bg-[#00AA72] animate-pulse shrink-0" />
+                <span className="whitespace-nowrap">Canvas synced</span>
+              </>
+            ) : syncState.status === 'connecting' ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 text-[#3355FF] animate-spin shrink-0" />
+                <span className="whitespace-nowrap">Connecting canvas...</span>
+              </>
+            ) : syncState.status === 'reconnecting' ? (
+              <>
+                <Radio className="w-3.5 h-3.5 text-[#D47500] animate-pulse shrink-0" />
+                <span className="whitespace-nowrap">Reconnecting...</span>
               </>
             ) : (
               <>
-                <Radio className="w-3.5 h-3.5 text-[#D47500] animate-spin" />
-                <span>Connecting sync...</span>
+                <AlertCircle className="w-3.5 h-3.5 text-[#FF5B4C] shrink-0" />
+                <span className="whitespace-nowrap">Sync offline</span>
+                {syncState.reconnect && (
+                  <button
+                    onClick={syncState.reconnect}
+                    className="ml-1 px-2 py-0.5 bg-[#FF5B4C] hover:bg-[#E0483A] text-white rounded-md text-[10px] font-sans font-bold cursor-pointer transition-colors"
+                  >
+                    Retry
+                  </button>
+                )}
               </>
             )}
           </div>
@@ -631,6 +657,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
           hideUi
           onMount={handleMount}
           autoFocus
+          licenseKey={import.meta.env.VITE_TLDRAW_LICENSE_KEY || undefined}
         />
       </div>
 
